@@ -114,4 +114,4 @@ jobs:
             up -d --no-deps --no-build --wait --wait-timeout 120 web
           docker compose -p fieldrelay-ci-web --env-file infra/.env.example -f infra/compose.yaml \
             exec -T web node -e \
-            "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+            "Promise.all([fetch('http://127.0.0.1:3000/'),fetch('http://127.0.0.1:3000/assets/editorial/industrial-tanker-route-primary.png')]).then(async([page,image])=>{const html=await page.text();if(!page.ok||!image.ok||!String(image.headers.get('content-type')).startsWith('image/png')||!html.includes('src=\"/assets/editorial/industrial-tanker-route-primary.png\"')||html.includes('/_next/image?url=%2Fassets%2Feditorial%2Findustrial-tanker-route-primary.png'))process.exit(1)}).catch(()=>process.exit(1))"
