@@ -283,7 +283,9 @@ cleanup() {
       else
         rm -f -- "$site_file"
       fi
-      caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1 && systemctl reload caddy || true
+      if caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
+        systemctl reload caddy || true
+      fi
     fi
 
     if [ "$release_started" = true ] && [ -f "$env_file" ]; then
