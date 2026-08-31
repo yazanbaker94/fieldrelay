@@ -6,6 +6,40 @@ FieldRelay is an offline-first, auditable shipment-handoff and integration-recov
 
 This is an independent portfolio project created by Yazan Baker after studying public low-connectivity, multi-party industrial workflows. It is not a WiQ Technologies product, does not reproduce WiQ software, and makes no regulatory or production-compliance claim.
 
+## Product tour
+
+[![FieldRelay public case study](docs/screenshots/web/landing-page.png)](https://fieldrelay.swoop.video/)
+
+The [live case study](https://fieldrelay.swoop.video/) presents the system as an instrumented chain of custody. The guided trace and operations console below are real captures from the deployed demo.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/web/guided-demo-complete.png" alt="Completed FieldRelay guided trace ending in a successful safe replay"></td>
+    <td width="50%"><img src="docs/screenshots/web/operations-overview.png" alt="FieldRelay operations overview"></td>
+  </tr>
+  <tr>
+    <td><strong>Guided reliability trace</strong><br>Three failed deliveries, DLQ movement, safe replay, and a final HTTP 200 result.</td>
+    <td><strong>Operations overview</strong><br>Lifecycle, exception, queue, and delivery evidence remain visible as separate states.</td>
+  </tr>
+</table>
+
+The Android client is a real offline-first application, not a responsive web shell. These screens were captured from the signed app running in an Android emulator.
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/screenshots/android/home-offline.png" alt="FieldRelay Android offline home"></td>
+    <td width="33%"><img src="docs/screenshots/android/saved-on-device.png" alt="FieldRelay Android saved-on-device confirmation"></td>
+    <td width="33%"><img src="docs/screenshots/android/receiver-discrepancy.png" alt="FieldRelay Android receiver discrepancy"></td>
+  </tr>
+  <tr>
+    <td><strong>Offline home</strong></td>
+    <td><strong>Durable local save</strong></td>
+    <td><strong>Receiver discrepancy</strong></td>
+  </tr>
+</table>
+
+The full capture set is in [`docs/screenshots`](docs/screenshots), including Sync Center, review-before-save, exception workbench, and recovered integration-delivery evidence.
+
 ## What the demo proves
 
 - Offline work survives application restart.
