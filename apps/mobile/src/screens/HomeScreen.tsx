@@ -108,7 +108,9 @@ export function HomeScreen() {
             </AppText>
             <AppText style={{ fontSize: 17 }}>{pendingCount} actions saved on this device</AppText>
             <AppText color={colors.muted} style={{ fontSize: 15 }}>
-              {demoOnline ? 'Open Sync Center to send them now' : 'Will sync automatically'}
+              {demoOnline
+                ? 'Open Sync Center to follow synchronization'
+                : 'Switch Demo network online to sync now'}
             </AppText>
           </View>
         </View>
@@ -264,4 +266,3 @@ const styles = StyleSheet.create({
     gap: 3,
   },
 });
-

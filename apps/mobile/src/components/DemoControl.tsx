@@ -6,6 +6,8 @@ import { AppText } from './AppText';
 
 export function DemoControl() {
   const { demoOnline, physicalOnline, toggleDemoConnectivity } = useFieldRelay();
+  const deviceSignal =
+    physicalOnline === null ? 'checking' : physicalOnline ? 'available' : 'unavailable';
 
   return (
     <View style={styles.wrapper}>
@@ -14,22 +16,46 @@ export function DemoControl() {
           Demo network
         </AppText>
         <AppText variant="caption" color={colors.muted}>
-          Device signal: {physicalOnline === null ? 'checking' : physicalOnline ? 'available' : 'unavailable'}
+          Simulation only · Device signal: {deviceSignal}
         </AppText>
       </View>
       <Pressable
         accessibilityRole="switch"
         accessibilityState={{ checked: demoOnline }}
-        accessibilityLabel="Toggle simulated network"
+        accessibilityLabel="Demo network"
+        accessibilityValue={{ text: demoOnline ? 'Online' : 'Offline' }}
+        accessibilityHint="Changes only the demo connection. Device connectivity is unchanged."
+        android_ripple={{ color: '#D9CEF7', foreground: true }}
         onPress={() => void toggleDemoConnectivity()}
-        style={({ pressed }) => [styles.control, pressed && { opacity: 0.72 }]}
+        style={({ pressed }) => [styles.control, pressed && styles.controlPressed]}
+        testID="demo-network-toggle"
       >
-        <Ionicons
-          name={demoOnline ? 'cloud-done-outline' : 'cloud-offline-outline'}
-          size={18}
-          color={colors.violet}
-        />
-        <AppText style={styles.controlText}>{demoOnline ? 'ONLINE' : 'OFFLINE'}</AppText>
+        <View style={[styles.option, !demoOnline && styles.activeOption]}>
+          <Ionicons
+            name="cloud-offline-outline"
+            size={19}
+            color={demoOnline ? colors.muted : colors.surface}
+          />
+          <AppText style={[styles.controlText, !demoOnline && styles.activeControlText]}>
+            OFFLINE
+          </AppText>
+          {!demoOnline ? (
+            <Ionicons name="checkmark-circle" size={16} color={colors.surface} />
+          ) : null}
+        </View>
+        <View style={[styles.option, demoOnline && styles.activeOption]}>
+          <Ionicons
+            name="cloud-done-outline"
+            size={19}
+            color={demoOnline ? colors.surface : colors.muted}
+          />
+          <AppText style={[styles.controlText, demoOnline && styles.activeControlText]}>
+            ONLINE
+          </AppText>
+          {demoOnline ? (
+            <Ionicons name="checkmark-circle" size={16} color={colors.surface} />
+          ) : null}
+        </View>
       </Pressable>
     </View>
   );
@@ -37,31 +63,47 @@ export function DemoControl() {
 
 const styles = StyleSheet.create({
   wrapper: {
-    minHeight: 58,
-    paddingLeft: 16,
-    paddingRight: 8,
+    minHeight: 116,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomColor: '#D9CEF7',
     borderBottomWidth: 1,
     backgroundColor: colors.violetSoft,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
   },
   copy: {
-    flex: 1,
+    gap: 1,
   },
   control: {
     minHeight: touchTarget,
-    minWidth: 112,
-    paddingHorizontal: 12,
+    borderColor: colors.violet,
+    borderWidth: 1,
+    borderRadius: 5,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  controlPressed: {
+    opacity: 0.8,
+  },
+  option: {
+    minHeight: touchTarget,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 7,
+    justifyContent: 'center',
+    gap: 8,
+  },
+  activeOption: {
+    backgroundColor: colors.violet,
   },
   controlText: {
-    color: colors.violet,
+    color: colors.muted,
     fontFamily: fonts.monoSemiBold,
     fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  activeControlText: {
+    color: colors.surface,
   },
 });

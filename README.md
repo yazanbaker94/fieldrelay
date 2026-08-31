@@ -27,12 +27,18 @@ The Android client is a real offline-first application, not a responsive web she
 
 <table>
   <tr>
-    <td width="33%"><img src="docs/screenshots/android/home-offline.png" alt="FieldRelay Android offline home"></td>
-    <td width="33%"><img src="docs/screenshots/android/saved-on-device.png" alt="FieldRelay Android saved-on-device confirmation"></td>
-    <td width="33%"><img src="docs/screenshots/android/receiver-discrepancy.png" alt="FieldRelay Android receiver discrepancy"></td>
+    <td width="50%"><img src="docs/screenshots/android/demo-network-offline.png" alt="FieldRelay Android Demo network Offline state with queued-action guidance"></td>
+    <td width="50%"><img src="docs/screenshots/android/demo-network-online-sync.png" alt="FieldRelay Android Demo network Online state after confirmed synchronization"></td>
   </tr>
   <tr>
-    <td><strong>Offline home</strong></td>
+    <td><strong>Demo network / Offline</strong><br>Two actions remain safe on-device with a direct next step.</td>
+    <td><strong>Demo network / Online</strong><br>Sync Center confirms the queue is clear and records the last successful batch.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/android/saved-on-device.png" alt="FieldRelay Android saved-on-device confirmation"></td>
+    <td><img src="docs/screenshots/android/receiver-discrepancy.png" alt="FieldRelay Android receiver discrepancy"></td>
+  </tr>
+  <tr>
     <td><strong>Durable local save</strong></td>
     <td><strong>Receiver discrepancy</strong></td>
   </tr>
@@ -129,7 +135,7 @@ The Android client is intentionally a real application, not a responsive web wra
 - Explicit uncached-handoff limitation
 - Persistent operation metadata: idempotency key, base version, and device timestamp
 
-See `apps/mobile/README.md` for emulator and APK commands. Verified build artifacts are written to `apps/mobile/artifacts`, published as immutable GitHub release assets, and linked from the website download page with a SHA-256 sidecar.
+See `apps/mobile/README.md` for emulator and APK commands. Verified build artifacts are written to `apps/mobile/artifacts` and published as immutable GitHub release assets. Download the [latest signed Android APK](https://github.com/yazanbaker94/fieldrelay/releases/latest/download/fieldrelay-android.apk) with its [SHA-256 sidecar](https://github.com/yazanbaker94/fieldrelay/releases/latest/download/fieldrelay-android.apk.sha256); the website download page uses those same stable URLs.
 
 ## Deployment
 

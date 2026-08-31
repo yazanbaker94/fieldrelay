@@ -76,4 +76,7 @@ manifest, permission profile, alignment, and dedicated Android signature, then
 writes `fieldrelay-android.apk` and its SHA-256 sidecar below
 `apps/mobile/artifacts/`. The local signing material remains outside the repository
 under the authorized operator profile and must be backed up securely; it is never
-included in deployment files or CI secrets.
+included in deployment files or CI secrets. Publish both files on an immutable
+GitHub release; the website and repository documentation resolve the newest pair
+through `releases/latest/download/fieldrelay-android.apk` and
+`releases/latest/download/fieldrelay-android.apk.sha256`.

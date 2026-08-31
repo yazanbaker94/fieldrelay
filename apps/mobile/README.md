@@ -13,7 +13,8 @@ Native Expo/React Native field client for the FieldRelay reliability prototype. 
 - Version conflicts become `NEEDS_REVIEW`. The server record is never silently overwritten.
 - “Offline” means saved on this device—not submitted or synced.
 
-The violet network switch is an explicit demo gate. Physical connectivity and the API health check remain separate, visible diagnostics.
+The violet **Demo network** control is an explicit simulation gate with distinct Offline and
+Online states. Physical connectivity and the API health check remain separate, visible diagnostics.
 
 ## API configuration
 
@@ -38,6 +39,13 @@ npx expo-doctor
 The unit suite covers discrepancy boundaries, durable-state migration/restart recovery, the isolated-run registration contract, exact server-issued payloads, version conflicts, and lost responses at both registration and mutation boundaries.
 
 ## Signed arm64 release APK
+
+Published downloads:
+
+- [Latest signed Android APK](https://github.com/yazanbaker94/fieldrelay/releases/latest/download/fieldrelay-android.apk)
+- [SHA-256 sidecar](https://github.com/yazanbaker94/fieldrelay/releases/latest/download/fieldrelay-android.apk.sha256)
+
+The stable links resolve to the newest immutable GitHub release assets and are also used by the public website download page.
 
 ```powershell
 npm run build:android:release

@@ -188,12 +188,48 @@ export function SyncScreen() {
     apiDiagnostic,
     demoOnline,
     pendingCount,
+    physicalOnline,
     resetDemo,
     runSync,
     state,
     storageDiagnostic,
   } = useFieldRelay();
   const groups = groupQueue(state.queue);
+  const guidance = !demoOnline
+    ? {
+        background: colors.violetSoft,
+        color: colors.violet,
+        copy: 'Switch Demo network online to sync now.',
+      }
+    : physicalOnline === null
+      ? {
+          background: colors.violetSoft,
+          color: colors.violet,
+          copy: 'Demo network is online. Checking the device signal before sync.',
+        }
+      : physicalOnline === false
+        ? {
+            background: colors.orangeSoft,
+            color: colors.orange,
+            copy: 'Demo network is online. Waiting for a device signal.',
+          }
+        : apiConnectionStatus === 'UNAVAILABLE'
+          ? {
+              background: colors.redSoft,
+              color: colors.red,
+              copy: 'Demo network is online. The API is unavailable; queued actions remain safe.',
+            }
+          : apiConnectionStatus === 'CHECKING'
+            ? {
+                background: colors.blueSoft,
+                color: colors.blue,
+                copy: 'Demo network is online. Checking the API before sync.',
+              }
+            : {
+                background: colors.greenSoft,
+                color: colors.green,
+                copy: 'Demo network is online. Queued operations sync automatically.',
+              };
 
   return (
     <ScreenFrame testID="sync-center-screen">
@@ -210,7 +246,9 @@ export function SyncScreen() {
               {pendingCount} actions pending
             </AppText>
             <AppText color={colors.muted}>
-              Your data is safe. We’ll sync everything when you’re online.
+              {pendingCount === 0
+                ? 'No queued actions are waiting to sync.'
+                : 'Queued actions remain safe until the next confirmed sync.'}
             </AppText>
           </View>
         </View>
@@ -237,6 +275,33 @@ export function SyncScreen() {
             Last confirmed batch complete
           </AppText>
         </View>
+
+        {pendingCount > 0 ? (
+          <View
+            style={[
+              styles.queueGuidance,
+              { backgroundColor: guidance.background, borderLeftColor: guidance.color },
+            ]}
+          >
+            <Ionicons
+              name={demoOnline ? 'cloud-done-outline' : 'cloud-offline-outline'}
+              size={23}
+              color={guidance.color}
+            />
+            <View style={{ flex: 1 }}>
+              <AppText variant="label" color={guidance.color}>
+                Demo network / {demoOnline ? 'online' : 'offline'}
+              </AppText>
+              <AppText
+                accessibilityLiveRegion="polite"
+                variant="caption"
+                color={colors.ink}
+              >
+                {guidance.copy}
+              </AppText>
+            </View>
+          </View>
+        ) : null}
 
         <Group title={`Needs attention / ${groups.needsAttention.length}`}>
           {groups.needsAttention.length ? (
@@ -363,6 +428,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     paddingBottom: 14,
     gap: 5,
+  },
+  queueGuidance: {
+    minHeight: 70,
+    padding: 12,
+    borderLeftWidth: 3,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 11,
   },
   group: {
     gap: 0,
