@@ -7,7 +7,7 @@ Internet
    |
    | TCP 80 / 443, UDP 443
    v
-Existing host Caddy (also serves AudioFetcher and Rook)
+Existing host Caddy (shared reverse proxy)
    |
    | fieldrelay.swoop.video only
    v
@@ -22,16 +22,15 @@ Fastify API ------------------------------------+
    `-- private Compose network --> PostgreSQL :5432
 ```
 
-The existing host Caddy is the only public listener. FieldRelay's Compose gateway
+The host Caddy service is the only public listener. FieldRelay's Compose gateway
 binds only to VPS loopback on port 18042; PostgreSQL remains on an internal network,
 and the API and web ports remain container-only. Server-sent events receive an
 explicit no-buffer proxy path. Every service has a liveness check and the internal
 gateway waits for both application services to become healthy.
 
 Every operational Compose command forces project name `fieldrelay`, so an env-file
-override cannot select a neighbouring stack. The four CPU ceilings total 1.30 vCPU
-on the reviewed 2-vCPU host; per-service memory and PID limits plus bounded
-`json-file` logs preserve capacity for existing workloads. API liveness
+override cannot select a neighbouring stack. Per-service CPU, memory and PID limits
+plus bounded `json-file` logs preserve capacity for other workloads. API liveness
 remains `/health`; deployment readiness uses `/ready`, which verifies the seeded
 PostgreSQL-backed store before the gateway or rollout is considered ready.
 
@@ -43,11 +42,11 @@ already labelled or named for Compose project `fieldrelay`.
 
 The host integration is one isolated file:
 `/etc/caddy/sites/fieldrelay.caddy`. The existing `/etc/caddy/Caddyfile` already
-imports that directory and is never overwritten. AudioFetcher systemd units,
-Rook's Compose project, firewall rules, and every other Caddy site are outside the
-FieldRelay deployment boundary. The preflight refuses an existing drop-in without
-the FieldRelay ownership marker and, on updates, verifies the origin listener is
-both loopback-only and owned by the labelled `fieldrelay` Caddy service.
+imports that directory and is never overwritten. Unrelated services, firewall
+rules and every other Caddy site are outside the FieldRelay deployment boundary.
+The preflight refuses an existing drop-in without the FieldRelay ownership marker
+and, on updates, verifies the origin listener is both loopback-only and owned by
+the labelled `fieldrelay` Caddy service.
 
 The API applies `apps/api/migrations` and runs the idempotent `FR-2026-0842` seed
 before listening. It owns delivery attempt/replay processing today, so the Compose

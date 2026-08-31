@@ -4,7 +4,7 @@
 
 # Internal HTTP gateway. The existing host Caddy terminates public TLS and proxies
 # only the FieldRelay hostname to 127.0.0.1:18042. This container never owns the
-# AudioFetcher VPS's public ports or certificate state.
+# shared host's public ports or certificate state.
 :8080 {
 	encode zstd gzip
 

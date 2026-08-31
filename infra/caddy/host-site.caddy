@@ -1,6 +1,6 @@
 # FIELDRELAY_HOST_SITE_V1
-# Managed only by FieldRelay's deployment script. AudioFetcher and every other
-# host remain in their existing Caddy files.
+# Managed only by FieldRelay's deployment script. Every unrelated host remains in
+# its existing Caddy file.
 fieldrelay.swoop.video {
 	encode zstd gzip
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"

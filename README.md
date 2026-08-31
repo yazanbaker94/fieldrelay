@@ -64,7 +64,7 @@ The full capture set is in [`docs/screenshots`](docs/screenshots), including Syn
 | `apps/api` | Fastify / TypeScript API with PostgreSQL adapter, in-memory demo store, audit hashing, outbox, retry, and SSE |
 | `apps/mobile` | Expo / React Native Android app with persistent offline queue and the five signature field flows |
 | `infra` | Portable VPS Compose, Caddy, backup, reset, health-check, and release assets |
-| `docs` | Product research, locked visual direction, design references, architecture, testing, and deployment notes |
+| `docs` | Reviewer walkthrough, architecture, testing evidence, screenshots, and deployment notes |
 
 All application source, visual assets, documentation, and build/deployment automation live beneath this folder, so the project can be moved as one unit. Private signing and VPS credentials intentionally remain outside the repository.
 
@@ -141,7 +141,7 @@ See `apps/mobile/README.md` for emulator and APK commands. Verified build artifa
 
 `infra/compose.yaml` defines the VPS stack behind Caddy at `fieldrelay.swoop.video`. PostgreSQL is private, only Caddy exposes host ports, health checks are included, and AWS is optional: the local delivery simulator demonstrates queue semantics until authorized AWS resources are configured.
 
-See `docs/deployment/vps-runbook.md` for the exact local-operator sequence. The existing pinned SSH identity stays on the authorized operator machine; no VPS credential is stored in this repository or GitHub Actions.
+See `docs/deployment/` for the public runtime architecture and reproducible release model. Deployment credentials remain outside the repository and GitHub Actions.
 
 ## Honest boundaries
 

@@ -18,7 +18,7 @@ linux/amd64 API and web images to GitHub Container Registry with SHA/tag metadat
 SBOMs, and provenance. It also uploads a relocatable tarball containing `infra/` and
 `docs/deployment/`.
 
-Before using the workflow in a public or organization repository:
+For a new GitHub organization or fork:
 
 1. Enable workflow package write access.
 2. Choose whether GHCR packages should be public or private.
@@ -28,17 +28,16 @@ Before using the workflow in a public or organization repository:
 
 ## Operator-controlled VPS rollout
 
-Production deployment is deliberately run from the authorized Windows operator
-machine, not from GitHub Actions. The existing AudioFetcher VPS identity key stays
-in the operator's local `.ssh` directory and is never copied into GitHub secrets,
-an Actions runner, the repository, or a release artifact.
+Production deployment is deliberately separated from GitHub Actions. SSH identity
+material stays on the authorized operator machine and is never copied into GitHub
+secrets, an Actions runner, the repository, or a release artifact.
 
 The operator must deploy a clean commit whose `api`, `web`, `mobile`, and
 `containers` checks are green. GitHub Actions still builds the API/web images, but
 the local rollout addresses each image by its immutable GHCR digest. The operator
 then:
 
-1. verifies the local identity-key fingerprint and the already-pinned host key;
+1. verifies the local identity-key fingerprint and pinned host key;
 2. creates an `infra/` plus `docs/deployment/` bundle from the exact release commit;
 3. uploads that bundle over strict host-key-checked SSH;
 4. runs the read-only VPS preflight;
@@ -51,9 +50,9 @@ The deployment script requires the existing database to be running and completes
 backup before an update, deploys only below `/opt/fieldrelay` with Compose project
 name `fieldrelay`, applies
 per-service resource and log ceilings, and manages only
-`/etc/caddy/sites/fieldrelay.caddy`. It does not stop or reconfigure AudioFetcher,
-Rook, or the host Caddyfile. See `vps-runbook.md` for the reviewed PowerShell
-sequence and recorded fingerprints.
+`/etc/caddy/sites/fieldrelay.caddy`. It does not stop or reconfigure unrelated
+services or the host Caddyfile. Host-specific addresses, credentials and recorded
+fingerprints are intentionally excluded from this public repository.
 
 Each rollout uses bounded Compose health waiting. If an unactivated release fails,
 the script removes only the exact release directory created by that attempt, so the

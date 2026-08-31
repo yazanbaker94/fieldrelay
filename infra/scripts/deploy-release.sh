@@ -13,14 +13,15 @@ api_image=$3
 web_image=$4
 deploy_root=${FIELDRELAY_DEPLOY_ROOT:-/opt/fieldrelay}
 origin_port=${FIELDRELAY_ORIGIN_PORT:-18042}
+host_caddy_env_file=${FIELDRELAY_HOST_CADDY_ENV_FILE:-}
 
 if [ "$(id -u)" -ne 0 ]; then
   printf '%s\n' "FieldRelay deployment requires the existing root account or an approved equivalent wrapper." >&2
   exit 1
 fi
 
-# This first deployment target is intentionally fixed to the isolated boundary
-# verified on the AudioFetcher VPS. Changing it requires a fresh host audit.
+# This deployment target is intentionally fixed to its reviewed isolated boundary.
+# Changing it requires a fresh host audit.
 if [ "$deploy_root" != /opt/fieldrelay ] || [ "$origin_port" != 18042 ]; then
   printf '%s\n' "Expected /opt/fieldrelay and loopback port 18042; refusing an unreviewed boundary." >&2
   exit 1
@@ -66,12 +67,24 @@ for command_name in awk caddy cat curl dirname docker flock grep install mktemp 
   fi
 done
 
-# The existing Rook host-site import references a protected environment value.
-# It is needed only while validating the complete host Caddy graph.
-if [ -f /etc/rook/caddy.env ]; then
+# A shared host may need protected values to validate its complete Caddy graph.
+# The path is supplied only by the operator and is never printed or copied.
+if [ -n "$host_caddy_env_file" ]; then
+  case "$host_caddy_env_file" in
+    /*) ;;
+    *)
+      printf '%s\n' "FIELDRELAY_HOST_CADDY_ENV_FILE must be an absolute path." >&2
+      exit 1
+      ;;
+  esac
+  if [ ! -f "$host_caddy_env_file" ] || [ -L "$host_caddy_env_file" ] || \
+     [ "$(stat -c '%u' -- "$host_caddy_env_file")" -ne 0 ]; then
+    printf '%s\n' "Host Caddy environment file must be a root-owned regular file." >&2
+    exit 1
+  fi
   set -a
-  # shellcheck disable=SC1091
-  . /etc/rook/caddy.env
+  # shellcheck disable=SC1090
+  . "$host_caddy_env_file"
   set +a
 fi
 
@@ -311,7 +324,7 @@ cleanup() {
       fi
     fi
 
-    printf '%s\n' "Deployment stopped. Existing AudioFetcher and Rook services were not modified." >&2
+    printf '%s\n' "Deployment stopped. Unrelated host services were not modified." >&2
   fi
 
   if [ -n "$env_snapshot" ] && [ -f "$env_snapshot" ]; then

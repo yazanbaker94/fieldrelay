@@ -127,7 +127,7 @@ services:
   caddy:
     image: caddy:2.11.4-alpine
     restart: unless-stopped
-    # AudioFetcher's host Caddy already owns public ports 80/443. This gateway is
+    # The shared host Caddy already owns public ports 80/443. This gateway is
     # deliberately reachable only from the VPS loopback interface; the isolated
     # host-site drop-in proxies fieldrelay.swoop.video to it.
     ports:

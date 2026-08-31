@@ -1,11 +1,12 @@
 #!/bin/sh
 set -eu
 
-# Read-only validation for the existing AudioFetcher VPS. This script must not
+# Read-only validation for a shared VPS. This script must not
 # create files, restart services, pull images, or alter firewall/Caddy state.
 
 origin_port=${FIELDRELAY_ORIGIN_PORT:-18042}
 deploy_root=${FIELDRELAY_DEPLOY_ROOT:-/opt/fieldrelay}
+host_caddy_env_file=${FIELDRELAY_HOST_CADDY_ENV_FILE:-}
 
 case "$origin_port" in
   ''|*[!0-9]*)
@@ -63,12 +64,24 @@ fi
 systemctl is-active --quiet docker
 systemctl is-active --quiet caddy
 
-# The shared host's Rook Caddy snippet references a protected environment value.
-# Load it only for validation; never print or copy it into FieldRelay state.
-if [ -f /etc/rook/caddy.env ]; then
+# A shared host may need protected values to validate its complete Caddy graph.
+# The path is supplied only by the operator and is never printed or copied.
+if [ -n "$host_caddy_env_file" ]; then
+  case "$host_caddy_env_file" in
+    /*) ;;
+    *)
+      printf '%s\n' "FIELDRELAY_HOST_CADDY_ENV_FILE must be an absolute path." >&2
+      exit 1
+      ;;
+  esac
+  if [ ! -f "$host_caddy_env_file" ] || [ -L "$host_caddy_env_file" ] || \
+     [ "$(stat -c '%u' -- "$host_caddy_env_file")" -ne 0 ]; then
+    printf '%s\n' "Host Caddy environment file must be a root-owned regular file." >&2
+    exit 1
+  fi
   set -a
-  # shellcheck disable=SC1091
-  . /etc/rook/caddy.env
+  # shellcheck disable=SC1090
+  . "$host_caddy_env_file"
   set +a
 fi
 caddy validate --config /etc/caddy/Caddyfile >/dev/null
