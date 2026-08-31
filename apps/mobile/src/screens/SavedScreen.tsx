@@ -7,13 +7,15 @@ import { useFieldRelay } from '../state/FieldRelayProvider';
 import { colors, fonts, spacing } from '../theme';
 
 export function SavedScreen() {
-  const { navigate } = useFieldRelay();
+  const { navigate, state } = useFieldRelay();
+  const shipmentId = state.lastSavedShipmentId ?? 'FR-2026-0844';
+  const operation = [...state.queue].reverse().find((item) => item.shipmentId === shipmentId);
 
   return (
     <ScreenFrame testID="saved-on-device-screen" bottomNav={false}>
       <View style={styles.recordTop}>
         <AppText variant="mono" color={colors.muted}>
-          LOCAL RECEIPT / OP-0842
+          LOCAL RECEIPT / {operation?.operationId ?? 'DEVICE LEDGER'}
         </AppText>
         <AppText variant="label" color={colors.blue}>
           FieldRelay
@@ -32,7 +34,7 @@ export function SavedScreen() {
             Saved on this device
           </AppText>
           <AppText style={styles.message}>
-            Shipment <AppText style={styles.inlineId}>FR-2026-0842</AppText> is safe on this phone.
+            Shipment <AppText style={styles.inlineId}>{shipmentId}</AppText> is safe on this phone.
           </AppText>
           <AppText style={styles.message}>
             FieldRelay will synchronize automatically when connectivity returns.
@@ -44,7 +46,9 @@ export function SavedScreen() {
             <AppText variant="label" color={colors.muted}>
               Stored
             </AppText>
-            <AppText variant="monoMedium">ON DEVICE / 14:08</AppText>
+            <AppText variant="monoMedium">
+              ON DEVICE / {operation?.deviceTimestamp.slice(11, 16) ?? 'NOW'}
+            </AppText>
           </View>
           <View style={styles.receiptRule} />
           <View>
@@ -56,7 +60,7 @@ export function SavedScreen() {
         </View>
 
         <View style={styles.actions}>
-          <PrimaryButton label="VIEW SHIPMENT" onPress={() => navigate('DISCREPANCY')} />
+          <PrimaryButton label="VIEW SHIPMENTS" onPress={() => navigate('SHIPMENTS')} />
           <PrimaryButton label="VIEW SYNC STATUS" tone="outline" onPress={() => navigate('SYNC')} />
         </View>
       </View>
@@ -139,4 +143,3 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 });
-

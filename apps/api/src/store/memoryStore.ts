@@ -1,4 +1,5 @@
 import { DomainError } from "../domain/errors.js";
+import { isDeepStrictEqual } from "node:util";
 import type {
   AuditEvent,
   DeliveryAttempt,
@@ -34,6 +35,14 @@ function clone<T>(value: T): T {
 class MemoryTransaction implements FieldRelayTransaction {
   constructor(private readonly state: MemoryState) {}
 
+  async acquireLock(_key: string): Promise<void> {
+    // Memory transactions are serialized by MemoryFieldRelayStore.
+  }
+
+  async countDemoRuns(): Promise<number> {
+    return this.state.exceptions.filter((record) => /^EX-0037-[A-Z0-9-]+$/.test(record.id)).length;
+  }
+
   async getShipment(id: string): Promise<Shipment | undefined> {
     return clone(this.state.shipments.find((shipment) => shipment.id === id));
   }
@@ -57,6 +66,19 @@ class MemoryTransaction implements FieldRelayTransaction {
         expectedVersion,
         currentVersion: current?.version
       });
+    }
+    for (const field of [
+      "offeredQuantityLiters",
+      "pickupQuantityLiters",
+      "receivedQuantityLiters",
+      "acceptedFinalQuantityLiters"
+    ] as const) {
+      if (current[field] !== undefined && shipment[field] !== current[field]) {
+        throw new DomainError(`${field} is immutable once recorded`, 409, "IMMUTABLE_EVIDENCE", {
+          shipmentId: shipment.id,
+          field
+        });
+      }
     }
     this.state.shipments[index] = clone(shipment);
   }
@@ -109,6 +131,22 @@ class MemoryTransaction implements FieldRelayTransaction {
     if (current.version !== expectedVersion) {
       throw new DomainError("Exception changed during the transaction", 409, "VERSION_CONFLICT");
     }
+    for (const field of [
+      "shipmentId",
+      "pickupQuantityLiters",
+      "receivedQuantityLiters",
+      "varianceLiters",
+      "variancePercentage",
+      "threshold",
+      "openedAt"
+    ] as const) {
+      if (!isDeepStrictEqual(current[field], exceptionRecord[field])) {
+        throw new DomainError("Original discrepancy evidence is immutable", 409, "IMMUTABLE_EVIDENCE", {
+          exceptionId: exceptionRecord.id,
+          field
+        });
+      }
+    }
     this.state.exceptions[index] = clone(exceptionRecord);
   }
 
@@ -117,7 +155,11 @@ class MemoryTransaction implements FieldRelayTransaction {
   }
 
   async insertOutbox(record: OutboxRecord): Promise<void> {
-    if (this.state.outbox.some((existing) => existing.id === record.id)) {
+    if (
+      this.state.outbox.some(
+        (existing) => existing.id === record.id || existing.stableIdempotencyKey === record.stableIdempotencyKey
+      )
+    ) {
       throw new DomainError("Outbox record already exists", 409, "DUPLICATE_OUTBOX");
     }
     this.state.outbox.push(clone(record));
@@ -125,8 +167,27 @@ class MemoryTransaction implements FieldRelayTransaction {
 
   async updateOutbox(record: OutboxRecord): Promise<void> {
     const index = this.state.outbox.findIndex((existing) => existing.id === record.id);
-    if (index < 0) {
+    const current = this.state.outbox[index];
+    if (index < 0 || !current) {
       throw new DomainError("Outbox record not found", 404, "NOT_FOUND");
+    }
+    for (const field of [
+      "shipmentId",
+      "eventType",
+      "payload",
+      "destinationType",
+      "stableIdempotencyKey",
+      "createdAt"
+    ] as const) {
+      if (!isDeepStrictEqual(current[field], record[field])) {
+        throw new DomainError("Outbox evidence is immutable", 409, "IMMUTABLE_EVIDENCE", {
+          outboxId: record.id,
+          field
+        });
+      }
+    }
+    if (current.deliveredAt !== undefined && current.deliveredAt !== record.deliveredAt) {
+      throw new DomainError("Outbox delivery time is immutable once recorded", 409, "IMMUTABLE_EVIDENCE");
     }
     this.state.outbox[index] = clone(record);
   }
@@ -140,7 +201,14 @@ class MemoryTransaction implements FieldRelayTransaction {
   }
 
   async insertDelivery(job: DeliveryJob): Promise<void> {
-    if (this.state.deliveries.some((existing) => existing.id === job.id)) {
+    if (
+      this.state.deliveries.some(
+        (existing) =>
+          existing.id === job.id ||
+          existing.outboxId === job.outboxId ||
+          existing.correlationId === job.correlationId
+      )
+    ) {
       throw new DomainError("Delivery already exists", 409, "DUPLICATE_DELIVERY");
     }
     this.state.deliveries.push(clone(job));
@@ -148,8 +216,30 @@ class MemoryTransaction implements FieldRelayTransaction {
 
   async updateDelivery(job: DeliveryJob): Promise<void> {
     const index = this.state.deliveries.findIndex((existing) => existing.id === job.id);
-    if (index < 0) {
+    const current = this.state.deliveries[index];
+    if (index < 0 || !current) {
       throw new DomainError("Delivery not found", 404, "NOT_FOUND");
+    }
+    for (const field of [
+      "shipmentId",
+      "outboxId",
+      "destinationType",
+      "destinationName",
+      "destinationUrl",
+      "stableIdempotencyKey",
+      "maxAttempts",
+      "correlationId",
+      "createdAt"
+    ] as const) {
+      if (current[field] !== job[field]) {
+        throw new DomainError("Delivery identity is immutable", 409, "IMMUTABLE_EVIDENCE", {
+          deliveryId: job.id,
+          field
+        });
+      }
+    }
+    if (current.deliveredAt !== undefined && current.deliveredAt !== job.deliveredAt) {
+      throw new DomainError("Delivery time is immutable once recorded", 409, "IMMUTABLE_EVIDENCE");
     }
     this.state.deliveries[index] = clone(job);
   }

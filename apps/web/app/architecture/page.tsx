@@ -1,3 +1,5 @@
+import Image from 'next/image';
+import Link from 'next/link';
 import { PrototypeDisclaimer, PublicHeader } from '@/components/fieldrelay/public-header';
 import { TechnologyRail } from '@/components/fieldrelay/technology-rail';
 
@@ -22,11 +24,11 @@ export default function ArchitecturePage() {
         <div className="arch-lane"><span>Persistence boundary</span><article><b>PostgreSQL transaction</b><small>Domain mutation + audit + outbox</small><code>shipment.version = 08</code></article><i>commit once →</i><article><b>Outbox relay</b><small>Publish / retry / observe</small><code>OB / 0019</code></article></div>
         <div className="arch-lane"><span>Delivery boundary</span><article><b>Queue + dead letter</b><small>Backoff / DLQ / manual replay</small><code>DL / 019</code></article><i>stable key →</i><article><b>Destination adapter</b><small>Generic webhook / OData example</small><code>dest_fr0842_completed_v1</code></article></div>
       </section>
-      <figure className="architecture-image"><img src="/assets/editorial/industrial-refinery-secondary.png" alt="Industrial refinery pipework" /></figure>
+      <figure className="architecture-image"><Image src="/assets/editorial/industrial-refinery-secondary.png" alt="Industrial refinery pipework" width={2172} height={724} /></figure>
       <section className="decision-ledger" id="decisions"><header><p>Six implementation decisions</p><h2>Failure paths are part of the product.</h2></header>{decisions.map(([no,title,copy]) => <article key={no}><span>{no}</span><h3>{title}</h3><p>{copy}</p></article>)}</section>
       <section className="production-deltas"><div><p>Prototype boundary</p><h2>What changes before production.</h2></div><ul><li>Managed PostgreSQL, secrets manager, and environment-isolated keys.</li><li>Authenticated tenancy and short-lived signed handoff tokens.</li><li>Real SQS/DLQ metrics, alarms, and incident ownership.</li><li>Jurisdiction-approved rules owned by qualified domain specialists.</li><li>Encrypted device database, remote revocation, and mobile threat review.</li><li>Load, chaos, accessibility, and recovery-time testing.</li></ul></section>
       <TechnologyRail />
-      <section className="architecture-cta"><p>FR / TECHNICAL / TRACE</p><h2>See the architecture fail safely.</h2><div><a href="/demo">Run guided demo</a><a href="/docs">Read technical decisions →</a></div></section>
+      <section className="architecture-cta"><p>FR / TECHNICAL / TRACE</p><h2>See the architecture fail safely.</h2><div><Link href="/demo">Run guided demo</Link><Link href="/docs">Read technical decisions →</Link></div></section>
       <PrototypeDisclaimer />
     </main>
   );

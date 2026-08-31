@@ -15,8 +15,29 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'FieldRelay — Instrumented Chain of Custody',
+  metadataBase: new URL('https://fieldrelay.swoop.video'),
+  title: {
+    default: 'FieldRelay — Instrumented Chain of Custody',
+    template: '%s · FieldRelay',
+  },
   description: 'An offline-first chain-of-custody prototype for field handoffs, discrepancy resolution, and recoverable integration delivery.',
+  openGraph: {
+    type: 'website',
+    title: 'FieldRelay — Instrumented Chain of Custody',
+    description: 'One synthetic shipment, every handoff: offline capture, immutable discrepancy evidence, and idempotent delivery recovery.',
+    images: [{
+      url: '/assets/editorial/industrial-tanker-route-primary.png',
+      width: 2172,
+      height: 724,
+      alt: 'FieldRelay industrial tanker route editorial artwork',
+    }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FieldRelay — Instrumented Chain of Custody',
+    description: 'An offline-first, failure-recoverable field handoff prototype.',
+    images: ['/assets/editorial/industrial-tanker-route-primary.png'],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

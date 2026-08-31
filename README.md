@@ -26,7 +26,7 @@ This is an independent portfolio project created by Yazan Baker after studying p
 | `infra` | Portable VPS Compose, Caddy, backup, reset, health-check, and release assets |
 | `docs` | Product research, locked visual direction, design references, architecture, testing, and deployment notes |
 
-Everything required to move or archive the project lives beneath this folder. No runtime path points to the former parent workspace.
+All application source, visual assets, documentation, and build/deployment automation live beneath this folder, so the project can be moved as one unit. Private signing and VPS credentials intentionally remain outside the repository.
 
 ## The core record
 
@@ -55,11 +55,11 @@ Requirements: Node.js 22+, npm, Java 17 and the Android SDK for the APK build. P
 
 ```bash
 # terminal 1
-npm --prefix apps/api install
+npm --prefix apps/api ci
 npm run dev:api
 
 # terminal 2
-npm --prefix apps/web install
+npm --prefix apps/web ci
 npm run dev:web
 ```
 
@@ -95,13 +95,13 @@ The Android client is intentionally a real application, not a responsive web wra
 - Explicit uncached-handoff limitation
 - Persistent operation metadata: idempotency key, base version, and device timestamp
 
-See `apps/mobile/README.md` for emulator and APK commands. Distribution artifacts are placed in `apps/mobile/artifacts` and copied to the web download directory during release preparation.
+See `apps/mobile/README.md` for emulator and APK commands. Verified build artifacts are written to `apps/mobile/artifacts`, published as immutable GitHub release assets, and linked from the website download page with a SHA-256 sidecar.
 
 ## Deployment
 
 `infra/compose.yaml` defines the VPS stack behind Caddy at `fieldrelay.swoop.video`. PostgreSQL is private, only Caddy exposes host ports, health checks are included, and AWS is optional: the local delivery simulator demonstrates queue semantics until authorized AWS resources are configured.
 
-See `docs/deployment/vps-runbook.md` for the exact operator sequence. The remaining external deployment input is the SSH host/user/key mapping that owns `swoop.video`; no credential is stored in this repository.
+See `docs/deployment/vps-runbook.md` for the exact local-operator sequence. The existing pinned SSH identity stays on the authorized operator machine; no VPS credential is stored in this repository or GitHub Actions.
 
 ## Honest boundaries
 

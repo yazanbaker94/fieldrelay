@@ -38,12 +38,8 @@ function Field({ label, value, onChangeText, keyboardType = 'default', suffix }:
 }
 
 export function CreateScreen() {
-  const { navigate } = useFieldRelay();
-  const [generator, setGenerator] = useState('Northstar Energy');
-  const [site, setSite] = useState('Alder Creek 14');
-  const [quantity, setQuantity] = useState('8,200');
-  const [driver, setDriver] = useState('Marcus Lee');
-  const [unit, setUnit] = useState('PAD 781');
+  const { draft, navigate, updateDraft } = useFieldRelay();
+  const [quantity, setQuantity] = useState(draft.offeredQuantityLiters.toLocaleString('en-CA'));
 
   return (
     <ScreenFrame
@@ -70,12 +66,20 @@ export function CreateScreen() {
               Step 1 of 3
             </AppText>
           </View>
-          <Field label="Generator" value={generator} onChangeText={setGenerator} />
-          <Field label="Site" value={site} onChangeText={setSite} />
+          <Field
+            label="Generator"
+            value={draft.generator}
+            onChangeText={(generator) => updateDraft({ generator })}
+          />
+          <Field label="Site" value={draft.site} onChangeText={(site) => updateDraft({ site })} />
           <Field
             label="Offer quantity"
             value={quantity}
-            onChangeText={setQuantity}
+            onChangeText={(value) => {
+              setQuantity(value);
+              const parsed = Number(value.replace(/[^0-9.]/g, ''));
+              if (Number.isFinite(parsed)) updateDraft({ offeredQuantityLiters: parsed });
+            }}
             keyboardType="numeric"
             suffix="L"
           />
@@ -86,21 +90,25 @@ export function CreateScreen() {
               Step 2 of 3
             </AppText>
           </View>
-          <Field label="Driver" value={driver} onChangeText={setDriver} />
-          <Field label="Unit" value={unit} onChangeText={setUnit} />
+          <Field
+            label="Driver"
+            value={draft.driver}
+            onChangeText={(driver) => updateDraft({ driver })}
+          />
+          <Field label="Unit" value={draft.unit} onChangeText={(unit) => updateDraft({ unit })} />
 
           <View style={styles.summaryStrip}>
             <View>
               <AppText variant="label" color={colors.muted}>
                 Material
               </AppText>
-              <AppText variant="bodyMedium">Waste Oil</AppText>
+              <AppText variant="bodyMedium">{draft.product}</AppText>
             </View>
             <View>
               <AppText variant="label" color={colors.muted}>
                 Unit type
               </AppText>
-              <AppText variant="bodyMedium">Vacuum Truck</AppText>
+              <AppText variant="bodyMedium">{draft.unitType}</AppText>
             </View>
           </View>
         </View>
@@ -177,4 +185,3 @@ const styles = StyleSheet.create({
     gap: 5,
   },
 });
-

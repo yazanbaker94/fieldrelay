@@ -12,6 +12,11 @@
     "android": {
       "package": "video.swoop.fieldrelay",
       "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#07121B",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -35,7 +40,8 @@
             "backgroundColor": "#07121B"
           }
         }
-      ]
+      ],
+      "expo-sqlite"
     ]
   }
 }

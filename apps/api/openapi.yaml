@@ -1,81 +1,222 @@
 openapi: 3.1.0
 info:
   title: FieldRelay API
-  version: 0.1.0
+  version: 0.2.0
   description: >-
     Offline-first chain-of-custody portfolio prototype using synthetic data.
-    Not affiliated with WiQ and not for production or regulatory use.
+    Not affiliated with WiQ and not for production or regulatory use. In public-simulator
+    mode the canonical baseline is read-only, writes are limited to isolated runs, and
+    delivery is forced to the local deterministic simulator.
 servers:
-  - url: http://localhost:4100/api/v1
+  - url: /
+security: []
 paths:
-  /demo:
+  /health:
     get:
-      summary: Get the complete FR-2026-0842 demo storyline
+      summary: Liveness check
+      operationId: getHealth
       responses:
-        "200": { description: Demo shipment, timeline, exception, and delivery }
-  /shipments:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+  /ready:
+    get:
+      summary: Store readiness and canonical-seed check
+      operationId: getReadiness
+      responses:
+        "200":
+          description: Store can be read
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Readiness" }
+        "503":
+          description: Store is readable but the canonical demo baseline is unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Readiness" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/meta:
+    get:
+      summary: Get status vocabulary, integration boundaries, and demo capabilities
+      operationId: getMetadata
+      responses:
+        "200":
+          description: API metadata
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+  /api/v1/demo:
+    get:
+      summary: Get the shared canonical FR-2026-0842 baseline
+      description: Read-only callers should prefer this endpoint. Interactive reviewers should create an isolated demo run.
+      operationId: getCanonicalDemo
+      responses:
+        "200":
+          description: Canonical shipment, scenario, timeline, exception, and any current delivery state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DemoState" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/demo/runs:
+    post:
+      summary: Create a fresh, isolated interactive demo baseline
+      description: >-
+        Starting over creates another run instead of deleting immutable evidence. Repeating the same request
+        with the same Idempotency-Key returns the original run. The response includes a run-specific offline
+        operation that can be sent twice to prove lost-response recovery without mutating the canonical record.
+        A mobile draft may provide a bounded offered quantity; the server includes it in that issued operation.
+      operationId: createDemoRun
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                runId: { $ref: "#/components/schemas/RunId" }
+                offlineOfferedQuantityLiters:
+                  type: number
+                  exclusiveMinimum: 0
+                  maximum: 1000000000
+      responses:
+        "201":
+          description: Isolated open-discrepancy baseline, resource IDs, and offline-recovery operation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DemoRunState" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/DemoCapacityReached" }
+  /api/v1/demo/runs/{runId}:
+    get:
+      summary: Get the current state of one isolated demo run
+      operationId: getDemoRun
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: Run-scoped shipment, timeline, exception, delivery, attempts, and conflicts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DemoRunState" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/shipments:
     get:
       summary: List shipments
+      operationId: listShipments
+      description: Isolated demo runs are excluded unless runId or includeDemoRuns=true is supplied.
       parameters:
         - { name: lifecycleStatus, in: query, schema: { $ref: "#/components/schemas/LifecycleStatus" } }
         - { name: exceptionStatus, in: query, schema: { $ref: "#/components/schemas/ExceptionStatus" } }
         - { name: deliveryStatus, in: query, schema: { $ref: "#/components/schemas/DeliveryStatus" } }
+        - { name: runId, in: query, schema: { $ref: "#/components/schemas/RunId" } }
+        - { name: includeDemoRuns, in: query, schema: { type: boolean, default: false } }
       responses:
-        "200": { description: Shipment list }
-  /shipments/{id}:
+        "200":
+          description: Filtered shipment list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Shipment" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/v1/shipments/{id}:
     get:
       summary: Get a shipment and its operational records
+      operationId: getShipment
       parameters:
         - $ref: "#/components/parameters/Id"
       responses:
-        "200": { description: Shipment detail }
+        "200":
+          description: Shipment detail, timeline, exception, delivery, and conflicts
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
         "404": { $ref: "#/components/responses/NotFound" }
-  /shipments/{id}/audit/verify:
+  /api/v1/shipments/{id}/audit/verify:
     get:
       summary: Verify the append-only SHA-256 audit chain
+      operationId: verifyShipmentAudit
       parameters:
         - $ref: "#/components/parameters/Id"
       responses:
-        "200": { description: Chain verification result }
-  /sync/operations:
+        "200":
+          description: Chain verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [shipmentId, eventCount, chainValid]
+                properties:
+                  shipmentId: { type: string }
+                  eventCount: { type: integer, minimum: 0 }
+                  chainValid: { type: boolean }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/sync/operations:
     post:
       summary: Synchronize one durable offline operation
+      operationId: syncOperation
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/SyncOperation" }
       responses:
-        "200": { description: Operation synchronized }
-        "201": { description: Shipment created }
-        "409": { description: Version conflict or idempotency-key mismatch }
-  /sync/results/{idempotencyKey}:
+        "200": { description: Operation synchronized or its original stored result returned }
+        "201": { description: Shipment created or its original stored result returned }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/PublicDemoReadOnly" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/sync/results/{idempotencyKey}:
     get:
-      summary: Recover the original result after a lost response
+      summary: Recover an original result after a lost response
+      operationId: recoverSyncResult
       parameters:
         - name: idempotencyKey
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, minLength: 1, maxLength: 200, pattern: "^[A-Za-z0-9][A-Za-z0-9._:~-]*$" }
       responses:
-        "200": { description: Original result }
+        "200": { description: Original stored result with replayed=true }
+        "201": { description: Original stored creation result with replayed=true }
         "404": { $ref: "#/components/responses/NotFound" }
-  /exceptions:
+  /api/v1/exceptions:
     get:
       summary: List shipment exceptions
+      operationId: listExceptions
+      description: Isolated demo runs are excluded unless runId or includeDemoRuns=true is supplied.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [DISCREPANCY_OPEN, RESOLVED] }
+        - { name: runId, in: query, schema: { $ref: "#/components/schemas/RunId" } }
+        - { name: includeDemoRuns, in: query, schema: { type: boolean, default: false } }
       responses:
-        "200": { description: Exception list }
-  /exceptions/{id}:
+        "200": { description: Filtered exception list }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/v1/exceptions/{id}:
     get:
       summary: Get an exception and immutable evidence
+      operationId: getException
       parameters:
         - $ref: "#/components/parameters/Id"
       responses:
-        "200": { description: Exception detail }
+        "200": { description: "Exception, shipment, and evidence events" }
         "404": { $ref: "#/components/responses/NotFound" }
-  /exceptions/{id}/resolve:
+  /api/v1/exceptions/{id}/resolve:
     post:
       summary: Resolve a discrepancy and atomically create its outbox delivery
+      operationId: resolveException
       parameters:
         - $ref: "#/components/parameters/Id"
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -85,60 +226,172 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/Resolution" }
       responses:
-        "200": { description: Resolved exception, completed shipment, and pending delivery }
-  /deliveries:
+        "200": { description: "Resolved exception, completed shipment, and pending delivery" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/PublicDemoReadOnly" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/deliveries:
     get:
       summary: List integration deliveries
+      operationId: listDeliveries
+      description: Isolated demo runs are excluded unless runId or includeDemoRuns=true is supplied.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [PENDING, RETRYING, FAILED, DLQ, DELIVERED] }
+        - { name: runId, in: query, schema: { $ref: "#/components/schemas/RunId" } }
+        - { name: includeDemoRuns, in: query, schema: { type: boolean, default: false } }
       responses:
-        "200": { description: Delivery list }
-  /deliveries/{id}:
+        "200": { description: Filtered delivery list }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/v1/deliveries/{id}:
     get:
-      summary: Get delivery attempts and outbox payload
+      summary: Get a delivery, sanitized attempt metadata, outbox payload, and shipment
+      operationId: getDelivery
       parameters:
         - $ref: "#/components/parameters/Id"
       responses:
-        "200": { description: Delivery detail }
+        "200": { description: Delivery forensic detail }
         "404": { $ref: "#/components/responses/NotFound" }
-  /deliveries/{id}/attempt:
+  /api/v1/deliveries/{id}/attempt:
     post:
       summary: Run one automatic delivery attempt
+      operationId: attemptDelivery
       parameters:
         - $ref: "#/components/parameters/Id"
         - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeliveryProcess" }
       responses:
         "200": { description: Attempt result }
-  /deliveries/{id}/replay:
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/PublicDemoReadOnly" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/deliveries/{id}/replay:
     post:
       summary: Manually replay a failed or DLQ delivery
+      operationId: replayDelivery
       parameters:
         - $ref: "#/components/parameters/Id"
         - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeliveryProcess" }
       responses:
         "200": { description: Replay result }
-  /events:
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/PublicDemoReadOnly" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/events:
     get:
       summary: Subscribe to server-sent operational events
+      operationId: subscribeToEvents
+      description: Emits connected, shipment.changed, exception.changed, delivery.changed, sync.conflict, and demo.run.created events.
       responses:
         "200":
-          description: text/event-stream
+          description: Server-sent event stream with a 20-second heartbeat
           content:
-            text/event-stream: {}
+            text/event-stream:
+              schema: { type: string }
+        "429": { $ref: "#/components/responses/RateLimited" }
 components:
   parameters:
     Id:
       name: id
       in: path
       required: true
-      schema: { type: string }
+      schema: { type: string, minLength: 1, maxLength: 160, pattern: "^[A-Za-z0-9][A-Za-z0-9._~-]*$" }
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/RunId" }
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
-      schema: { type: string, minLength: 1 }
+      schema: { type: string, minLength: 1, maxLength: 200, pattern: "^[A-Za-z0-9][A-Za-z0-9._:~-]*$" }
   responses:
+    BadRequest:
+      description: Request validation failed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
     NotFound:
       description: Record not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    Conflict:
+      description: Invalid state, stale version, duplicate ID, or idempotency-key mismatch
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    PublicDemoReadOnly:
+      description: The public simulator permits writes only to a registered isolated run
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    RateLimited:
+      description: Per-client public write or live-event connection limit reached
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    DemoCapacityReached:
+      description: The immutable public demo-run capacity has been reached
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+    InternalError:
+      description: Unexpected server or store failure
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
   schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: [object, "null"], additionalProperties: true }
+    Health:
+      type: object
+      required: [status, service, store, time]
+      properties:
+        status: { const: ok }
+        service: { const: fieldrelay-api }
+        store: { type: string, enum: [memory, postgres] }
+        time: { type: string, format: date-time }
+    Readiness:
+      type: object
+      required: [status, service, store, canonicalDemoSeeded, time]
+      properties:
+        status: { type: string, enum: [ready, not-ready] }
+        service: { const: fieldrelay-api }
+        store: { type: string, enum: [memory, postgres] }
+        canonicalDemoSeeded: { type: boolean }
+        time: { type: string, format: date-time }
+    RunId:
+      type: string
+      minLength: 3
+      maxLength: 24
+      pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
     LifecycleStatus:
       type: string
       enum: [DRAFT, OFFERED, ACCEPTED, PICKED_UP, IN_TRANSIT, RECEIVED, COMPLETED]
@@ -153,32 +406,100 @@ components:
       enum: [NOT_STARTED, PENDING, RETRYING, FAILED, DLQ, DELIVERED]
     Actor:
       type: object
+      additionalProperties: false
       required: [id, name]
       properties:
+        id: { type: string, minLength: 1, maxLength: 160 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        role: { type: string, minLength: 1, maxLength: 80 }
+    Shipment:
+      type: object
+      required: [id, lifecycleStatus, syncStatus, exceptionStatus, deliveryStatus, version, createdAt, updatedAt]
+      properties:
         id: { type: string }
-        name: { type: string }
-        role: { type: string }
+        lifecycleStatus: { $ref: "#/components/schemas/LifecycleStatus" }
+        syncStatus: { $ref: "#/components/schemas/SyncStatus" }
+        exceptionStatus: { $ref: "#/components/schemas/ExceptionStatus" }
+        deliveryStatus: { $ref: "#/components/schemas/DeliveryStatus" }
+        offeredQuantityLiters: { type: number, exclusiveMinimum: 0 }
+        pickupQuantityLiters: { type: number, exclusiveMinimum: 0 }
+        receivedQuantityLiters: { type: number, minimum: 0 }
+        acceptedFinalQuantityLiters: { type: number, minimum: 0 }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     SyncOperation:
       type: object
+      additionalProperties: false
       required: [operationId, idempotencyKey, type, shipmentId, baseVersion, deviceTimestamp, actor, payload]
       properties:
-        operationId: { type: string }
-        idempotencyKey: { type: string }
+        operationId: { type: string, minLength: 1, maxLength: 160 }
+        idempotencyKey: { type: string, minLength: 1, maxLength: 200, pattern: "^[A-Za-z0-9][A-Za-z0-9._:~-]*$" }
         type:
           type: string
           enum: [CREATE_SHIPMENT, OFFER_SHIPMENT, ACCEPT_HANDOFF, CONFIRM_PICKUP, RECORD_RECEIPT]
-        shipmentId: { type: string }
+        shipmentId: { type: string, minLength: 1, maxLength: 160 }
         baseVersion: { type: integer, minimum: 0 }
         deviceTimestamp: { type: string, format: date-time }
         actor: { $ref: "#/components/schemas/Actor" }
-        payload: { type: object, additionalProperties: true }
+        payload:
+          type: object
+          maxProperties: 20
+          additionalProperties: true
     Resolution:
       type: object
+      additionalProperties: false
       required: [category, acceptedFinalQuantityLiters, reason, note, actor]
       properties:
-        category: { type: string }
-        acceptedFinalQuantityLiters: { type: number, minimum: 0 }
-        reason: { type: string }
-        note: { type: string }
+        category: { type: string, minLength: 1, maxLength: 80 }
+        acceptedFinalQuantityLiters: { type: number, minimum: 0, maximum: 1000000000 }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        note: { type: string, minLength: 1, maxLength: 2000 }
         actor: { $ref: "#/components/schemas/Actor" }
         occurredAt: { type: string, format: date-time }
+    DeliveryProcess:
+      type: object
+      additionalProperties: false
+      properties:
+        simulatorMode: { type: string, enum: [success, retryable-failure, permanent-failure] }
+        actor: { $ref: "#/components/schemas/Actor" }
+    DemoState:
+      type: object
+      required: [runId, isolated, baseline, resources, scenario, shipment, timeline, exception, delivery, deliveryAttempts]
+      properties:
+        runId: { type: "null" }
+        isolated: { const: false }
+        baseline: { const: DISCREPANCY_OPEN }
+        resources: { type: object, additionalProperties: { type: string } }
+        scenario: { type: object, additionalProperties: true }
+        shipment: { $ref: "#/components/schemas/Shipment" }
+        timeline: { type: array, items: { type: object, additionalProperties: true } }
+        exception: { type: [object, "null"], additionalProperties: true }
+        delivery: { type: [object, "null"], additionalProperties: true }
+        deliveryAttempts: { type: array, items: { type: object, additionalProperties: true } }
+    DemoRunState:
+      type: object
+      required: [runId, isolated, resources, scenario, offlineRecovery, shipment, timeline, exception, delivery, deliveryAttempts, conflicts]
+      properties:
+        runId: { $ref: "#/components/schemas/RunId" }
+        isolated: { const: true }
+        replayed: { type: boolean }
+        baseline: { const: DISCREPANCY_OPEN }
+        resources: { type: object, additionalProperties: { type: string } }
+        scenario: { type: object, additionalProperties: true }
+        offlineRecovery:
+          type: object
+          required: [operation, syncPath, resultPath, expectedServerMutations, instructions]
+          properties:
+            operation: { $ref: "#/components/schemas/SyncOperation" }
+            syncPath: { const: /api/v1/sync/operations }
+            resultPath: { type: string }
+            expectedServerMutations: { const: 1 }
+            instructions: { type: string }
+        shipment: { $ref: "#/components/schemas/Shipment" }
+        timeline: { type: array, items: { type: object, additionalProperties: true } }
+        exception: { type: [object, "null"], additionalProperties: true }
+        delivery: { type: [object, "null"], additionalProperties: true }
+        deliveryAttempts: { type: array, items: { type: object, additionalProperties: true } }
+        conflicts: { type: array, items: { type: object, additionalProperties: true } }
+        resetStrategy: { type: string }

@@ -13,7 +13,7 @@
     "test:api": "npm --prefix apps/api test",
     "test:mobile": "npm --prefix apps/mobile test",
     "typecheck": "npm --prefix apps/api run typecheck && npm --prefix apps/mobile run typecheck",
-    "android:apk": "npm --prefix apps/mobile run android:apk"
+    "android:apk": "npm --prefix apps/mobile run build:android:release"
   },
   "engines": {
     "node": ">=22.13.0"

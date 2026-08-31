@@ -1,38 +1,15 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { INITIAL_MOBILE_STATE } from '../data';
 import type {
+  Actor,
   ConflictChoice,
-  OperationKind,
   PersistedMobileState,
+  SyncOperationType,
   SyncOperation,
   SyncStatus,
 } from '../types';
 
-export const MOBILE_STATE_KEY = '@fieldrelay/mobile-state/v1';
-
 export function cloneInitialState(): PersistedMobileState {
   return JSON.parse(JSON.stringify(INITIAL_MOBILE_STATE)) as PersistedMobileState;
-}
-
-export async function loadMobileState(): Promise<PersistedMobileState> {
-  const raw = await AsyncStorage.getItem(MOBILE_STATE_KEY);
-  if (!raw) {
-    return cloneInitialState();
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as PersistedMobileState;
-    if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.queue)) {
-      return cloneInitialState();
-    }
-    return parsed;
-  } catch {
-    return cloneInitialState();
-  }
-}
-
-export async function persistMobileState(state: PersistedMobileState): Promise<void> {
-  await AsyncStorage.setItem(MOBILE_STATE_KEY, JSON.stringify(state));
 }
 
 function makeSuffix(): string {
@@ -41,8 +18,9 @@ function makeSuffix(): string {
 
 export function createLocalOperation(args: {
   shipmentId: string;
-  kind: OperationKind;
+  type: SyncOperationType;
   baseVersion: number;
+  actor: Actor;
   payload: Record<string, unknown>;
   now?: Date;
   suffix?: string;
@@ -50,19 +28,28 @@ export function createLocalOperation(args: {
   const now = args.now ?? new Date();
   const suffix = args.suffix ?? makeSuffix();
   const versionTag = `v${args.baseVersion}`;
-  const kindTag = args.kind.toLowerCase().replaceAll('_', '-');
+  const typeTag = args.type.toLowerCase().replaceAll('_', '-');
+  const operationId = `OP-${now.getTime()}-${suffix}`;
 
   return {
-    localOperationId: `OP-${now.getTime()}-${suffix}`,
-    idempotencyKey: `device-fieldrelay:${args.shipmentId}:${kindTag}:${versionTag}:${suffix}`,
+    operationId,
+    idempotencyKey: `device-fieldrelay:${args.shipmentId}:${typeTag}:${versionTag}:${suffix}`,
     shipmentId: args.shipmentId,
-    kind: args.kind,
+    type: args.type,
     status: 'WAITING',
     baseVersion: args.baseVersion,
-    deviceCreatedAt: now.toISOString(),
+    deviceTimestamp: now.toISOString(),
+    actor: args.actor,
     payload: args.payload,
     attempts: 0,
+    ...(args.type === 'CREATE_SHIPMENT'
+      ? { registrationIdempotencyKey: `device-register:${operationId}` }
+      : {}),
   };
+}
+
+export function registrationIdempotencyKeyFor(operation: SyncOperation): string {
+  return operation.registrationIdempotencyKey ?? `device-register:${operation.operationId}`;
 }
 
 export function enqueueIdempotently(
@@ -77,12 +64,12 @@ export function enqueueIdempotently(
 
 export function updateOperationStatus(
   queue: SyncOperation[],
-  localOperationId: string,
+  operationId: string,
   status: SyncStatus,
   patch: Partial<SyncOperation> = {},
 ): SyncOperation[] {
   return queue.map((operation) =>
-    operation.localOperationId === localOperationId
+    operation.operationId === operationId
       ? { ...operation, ...patch, status }
       : operation,
   );
@@ -90,11 +77,11 @@ export function updateOperationStatus(
 
 export function resolveConflict(
   queue: SyncOperation[],
-  localOperationId: string,
+  operationId: string,
   choice: ConflictChoice,
 ): SyncOperation[] {
   return queue.map((operation) => {
-    if (operation.localOperationId !== localOperationId) {
+    if (operation.operationId !== operationId) {
       return operation;
     }
 
@@ -107,16 +94,32 @@ export function resolveConflict(
       };
     }
 
+    const sentForReview = choice === 'SEND_FOR_REVIEW';
     return {
       ...operation,
       conflictChoice: choice,
-      status: choice === 'SEND_FOR_REVIEW' ? 'WAITING' : 'NEEDS_REVIEW',
+      status: 'NEEDS_REVIEW',
       lastError:
         choice === 'KEEP_DRAFT'
           ? 'Kept as a separate device draft. Server data was not overwritten.'
-          : undefined,
+          : sentForReview
+            ? 'Flagged for Operations review. The original mutation will not be resubmitted automatically.'
+            : undefined,
     };
   });
+}
+
+export function recoverInterruptedOperations(queue: SyncOperation[]): SyncOperation[] {
+  return queue.map((operation) =>
+    operation.status === 'SYNCING'
+      ? {
+          ...operation,
+          status: 'CHECKING_RESULT',
+          lastError:
+            'The app restarted during synchronization. Checking the original idempotency key before sending anything again.',
+        }
+      : operation,
+  );
 }
 
 export function pendingOperationCount(queue: SyncOperation[]): number {
@@ -136,3 +139,10 @@ export function groupQueue(queue: SyncOperation[]) {
   };
 }
 
+export function nextDraftShipmentId(queue: SyncOperation[]): string {
+  const highest = queue.reduce((current, operation) => {
+    const match = /^FR-2026-(\d{4})$/.exec(operation.shipmentId);
+    return match ? Math.max(current, Number(match[1])) : current;
+  }, 843);
+  return `FR-2026-${String(highest + 1).padStart(4, '0')}`;
+}

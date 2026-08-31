@@ -158,6 +158,17 @@ function conflictFromRow(row: QueryResultRow): SyncConflict {
 class PostgresTransaction implements FieldRelayTransaction {
   constructor(private readonly client: PoolClient) {}
 
+  async acquireLock(key: string): Promise<void> {
+    await this.client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [key]);
+  }
+
+  async countDemoRuns(): Promise<number> {
+    const result = await this.client.query(
+      "SELECT count(*)::integer AS count FROM shipment_exceptions WHERE id LIKE 'EX-0037-%'"
+    );
+    return Number(result.rows[0]?.count ?? 0);
+  }
+
   async getShipment(id: string): Promise<Shipment | undefined> {
     const result = await this.client.query("SELECT * FROM shipments WHERE id = $1 FOR UPDATE", [id]);
     return result.rows[0] ? shipmentFromRow(result.rows[0]) : undefined;
@@ -480,26 +491,34 @@ export class PostgresFieldRelayStore implements FieldRelayStore {
   }
 
   async snapshot(): Promise<FieldRelaySnapshot> {
-    const [shipments, events, exceptions, outbox, deliveries, attempts, conflicts, idempotency] = await Promise.all([
-      this.pool.query("SELECT * FROM shipments ORDER BY created_at DESC"),
-      this.pool.query("SELECT * FROM audit_events ORDER BY shipment_id, sequence"),
-      this.pool.query("SELECT * FROM shipment_exceptions ORDER BY opened_at DESC"),
-      this.pool.query("SELECT * FROM outbox_records ORDER BY created_at DESC"),
-      this.pool.query("SELECT * FROM delivery_jobs ORDER BY created_at DESC"),
-      this.pool.query("SELECT * FROM delivery_attempts ORDER BY occurred_at"),
-      this.pool.query("SELECT * FROM sync_conflicts ORDER BY created_at DESC"),
-      this.pool.query("SELECT * FROM idempotency_results ORDER BY created_at DESC")
-    ]);
-    return {
-      shipments: shipments.rows.map(shipmentFromRow),
-      auditEvents: events.rows.map(eventFromRow),
-      exceptions: exceptions.rows.map(exceptionFromRow),
-      outbox: outbox.rows.map(outboxFromRow),
-      deliveries: deliveries.rows.map(deliveryFromRow),
-      deliveryAttempts: attempts.rows.map(attemptFromRow),
-      conflicts: conflicts.rows.map(conflictFromRow),
-      idempotencyResults: idempotency.rows.map(idempotencyFromRow)
-    };
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const shipments = await client.query("SELECT * FROM shipments ORDER BY created_at DESC");
+      const events = await client.query("SELECT * FROM audit_events ORDER BY shipment_id, sequence");
+      const exceptions = await client.query("SELECT * FROM shipment_exceptions ORDER BY opened_at DESC");
+      const outbox = await client.query("SELECT * FROM outbox_records ORDER BY created_at DESC");
+      const deliveries = await client.query("SELECT * FROM delivery_jobs ORDER BY created_at DESC");
+      const attempts = await client.query("SELECT * FROM delivery_attempts ORDER BY occurred_at");
+      const conflicts = await client.query("SELECT * FROM sync_conflicts ORDER BY created_at DESC");
+      const idempotency = await client.query("SELECT * FROM idempotency_results ORDER BY created_at DESC");
+      await client.query("COMMIT");
+      return {
+        shipments: shipments.rows.map(shipmentFromRow),
+        auditEvents: events.rows.map(eventFromRow),
+        exceptions: exceptions.rows.map(exceptionFromRow),
+        outbox: outbox.rows.map(outboxFromRow),
+        deliveries: deliveries.rows.map(deliveryFromRow),
+        deliveryAttempts: attempts.rows.map(attemptFromRow),
+        conflicts: conflicts.rows.map(conflictFromRow),
+        idempotencyResults: idempotency.rows.map(idempotencyFromRow)
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async close(): Promise<void> {

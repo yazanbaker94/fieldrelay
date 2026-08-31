@@ -11,11 +11,12 @@ import { groupQueue } from '../storage/offlineQueue';
 import { colors, fonts, ledgerCard, spacing } from '../theme';
 import type { SyncOperation } from '../types';
 
-const operationNames: Record<SyncOperation['kind'], string> = {
+const operationNames: Record<SyncOperation['type'], string> = {
   CREATE_SHIPMENT: 'Create shipment',
-  RECORD_PICKUP: 'Confirm pickup',
+  OFFER_SHIPMENT: 'Offer shipment',
+  ACCEPT_HANDOFF: 'Accept handoff',
+  CONFIRM_PICKUP: 'Confirm pickup',
   RECORD_RECEIPT: 'Record receiver quantity',
-  RESOLVE_EXCEPTION: 'Resolve discrepancy',
 };
 
 function savedTime(iso: string) {
@@ -69,57 +70,85 @@ function OperationRow({ operation }: { operation: SyncOperation }) {
               {operation.shipmentId}
             </AppText>
             <AppText variant="bodyMedium" style={{ fontSize: 15 }}>
-              {operationNames[operation.kind]}
+              {operationNames[operation.type]}
             </AppText>
+            {operation.serverShipmentId ? (
+              <AppText variant="caption" color={colors.blue}>
+                Isolated server record / {operation.serverShipmentId}
+              </AppText>
+            ) : null}
           </View>
           <AppText variant="caption" color={accent} style={{ textAlign: 'right' }}>
             {statusText}
           </AppText>
         </View>
         <AppText variant="caption" color={colors.muted}>
-          Saved {savedTime(operation.deviceCreatedAt)} ·{' '}
+          Saved {savedTime(operation.deviceTimestamp)} ·{' '}
           {needsReview
             ? 'Choose a safe outcome; the server will not be overwritten.'
             : checking
               ? 'FieldRelay is querying the original key, not sending a second mutation.'
               : synced
-                ? 'The server confirmed the original operation.'
-                : 'The same operation will be sent when online.'}
+                ? 'The server confirmed its scoped operation and preserved the local-to-server mapping.'
+                : operation.type === 'CREATE_SHIPMENT'
+                  ? 'A stable key will register an isolated run before its server-issued operation is sent.'
+                  : 'The same operation will be sent when online.'}
         </AppText>
 
         {needsReview ? (
           <View style={styles.conflictBox}>
             <AppText variant="caption" color={colors.muted}>
-              Server version 2 is newer than local base version {operation.baseVersion}.
+              Server version {operation.serverVersion ?? 'unknown'} is newer than local base version{' '}
+              {operation.baseVersion}.
             </AppText>
             <PrimaryButton
-              label="SEND LOCAL ENTRY FOR REVIEW"
+              label="FLAG FOR OPERATIONS REVIEW"
               compact
-              onPress={() => resolveOperationConflict(operation.localOperationId, 'SEND_FOR_REVIEW')}
+              onPress={() => void resolveOperationConflict(operation.operationId, 'SEND_FOR_REVIEW')}
             />
             <PrimaryButton
               label="KEEP AS SEPARATE DRAFT"
               compact
               tone="outline"
-              onPress={() => resolveOperationConflict(operation.localOperationId, 'KEEP_DRAFT')}
+              onPress={() => void resolveOperationConflict(operation.operationId, 'KEEP_DRAFT')}
             />
             <PrimaryButton
               label="USE SERVER VERSION"
               compact
               tone="outline"
-              onPress={() => resolveOperationConflict(operation.localOperationId, 'USE_SERVER')}
+              onPress={() => void resolveOperationConflict(operation.operationId, 'USE_SERVER')}
             />
           </View>
         ) : null}
 
         <TechnicalDetails>
-          <TechnicalRow label="Local operation" value={operation.localOperationId} />
+          <TechnicalRow label="Operation" value={operation.operationId} />
+          <TechnicalRow label="API operation type" value={operation.type} />
           <TechnicalRow label="Idempotency key" value={operation.idempotencyKey} />
-          <TechnicalRow label="Base version" value={String(operation.baseVersion)} />
-          <TechnicalRow label="Device timestamp" value={operation.deviceCreatedAt} />
-          <TechnicalRow label="Attempts" value={String(operation.attempts)} />
+          {operation.registrationIdempotencyKey ? (
+            <TechnicalRow label="Registration key" value={operation.registrationIdempotencyKey} />
+          ) : null}
+          {operation.serverRunId ? <TechnicalRow label="Server run" value={operation.serverRunId} /> : null}
+          {operation.serverShipmentId ? (
+            <TechnicalRow label="Server shipment" value={operation.serverShipmentId} />
+          ) : null}
           {operation.serverOperationId ? (
-            <TechnicalRow label="Server result" value={operation.serverOperationId} />
+            <TechnicalRow label="Server operation" value={operation.serverOperationId} />
+          ) : null}
+          {operation.serverIdempotencyKey ? (
+            <TechnicalRow label="Server operation key" value={operation.serverIdempotencyKey} />
+          ) : null}
+          <TechnicalRow label="Base version" value={String(operation.baseVersion)} />
+          <TechnicalRow label="Device timestamp" value={operation.deviceTimestamp} />
+          <TechnicalRow label="Attempts" value={String(operation.attempts)} />
+          {operation.nextAttemptAt ? (
+            <TechnicalRow label="Next safe check" value={operation.nextAttemptAt} />
+          ) : null}
+          {operation.serverVersion !== undefined ? (
+            <TechnicalRow label="Server version" value={String(operation.serverVersion)} />
+          ) : null}
+          {operation.serverResultRecovered ? (
+            <TechnicalRow label="Lost-response recovery" value="ORIGINAL_RESULT_RETURNED" />
           ) : null}
           {operation.lastError ? <TechnicalRow label="Diagnostic" value={operation.lastError} /> : null}
         </TechnicalDetails>
@@ -154,11 +183,15 @@ function EmptyGroup({ copy }: { copy: string }) {
 
 export function SyncScreen() {
   const {
+    apiBaseUrl,
+    apiConnectionStatus,
+    apiDiagnostic,
     demoOnline,
     pendingCount,
     resetDemo,
     runSync,
     state,
+    storageDiagnostic,
   } = useFieldRelay();
   const groups = groupQueue(state.queue);
 
@@ -187,7 +220,18 @@ export function SyncScreen() {
             <AppText variant="caption" color={colors.muted}>
               Last sync
             </AppText>
-            <AppText variant="monoMedium">07 MAY 2026 / 13:57</AppText>
+            <AppText variant="monoMedium">
+              {state.lastSyncAt
+                ? new Date(state.lastSyncAt).toLocaleString('en-CA', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                  })
+                : 'NO CONFIRMED SYNC'}
+            </AppText>
           </View>
           <AppText variant="caption" color={colors.green}>
             Last confirmed batch complete
@@ -197,7 +241,7 @@ export function SyncScreen() {
         <Group title={`Needs attention / ${groups.needsAttention.length}`}>
           {groups.needsAttention.length ? (
             groups.needsAttention.map((operation) => (
-              <OperationRow key={operation.localOperationId} operation={operation} />
+              <OperationRow key={operation.operationId} operation={operation} />
             ))
           ) : (
             <EmptyGroup copy="No conflicts require a decision." />
@@ -207,7 +251,7 @@ export function SyncScreen() {
         <Group title={`Waiting for connection / ${groups.waiting.length}`}>
           {groups.waiting.length ? (
             groups.waiting.map((operation) => (
-              <OperationRow key={operation.localOperationId} operation={operation} />
+              <OperationRow key={operation.operationId} operation={operation} />
             ))
           ) : (
             <EmptyGroup copy="No operations are waiting." />
@@ -217,7 +261,7 @@ export function SyncScreen() {
         <Group title={`Synchronizing / ${groups.synchronizing.length}`}>
           {groups.synchronizing.length ? (
             groups.synchronizing.map((operation) => (
-              <OperationRow key={operation.localOperationId} operation={operation} />
+              <OperationRow key={operation.operationId} operation={operation} />
             ))
           ) : (
             <EmptyGroup copy="No operations are in flight." />
@@ -226,7 +270,7 @@ export function SyncScreen() {
 
         <Group title="Recently synced">
           {groups.synced.map((operation) => (
-            <OperationRow key={operation.localOperationId} operation={operation} />
+            <OperationRow key={operation.operationId} operation={operation} />
           ))}
           <View style={styles.recentRow}>
             <Ionicons name="checkmark" size={21} color={colors.green} />
@@ -255,23 +299,41 @@ export function SyncScreen() {
         </Group>
 
         <PrimaryButton
-          label={demoOnline ? 'SYNC NOW' : 'WAITING FOR CONNECTION'}
+          label={
+            apiConnectionStatus === 'CHECKING'
+              ? 'CHECKING API'
+              : demoOnline
+                ? 'SYNC NOW'
+                : 'WAITING FOR CONNECTION'
+          }
           tone="dark"
           icon={demoOnline ? 'sync' : 'cloud-offline-outline'}
-          disabled={!demoOnline || pendingCount === 0}
-          onPress={() => void runSync()}
+          disabled={!demoOnline || pendingCount === 0 || apiConnectionStatus === 'CHECKING'}
+          onPress={() => void runSync(true)}
         />
+
+        {apiDiagnostic || storageDiagnostic ? (
+          <View accessibilityRole="alert" style={styles.diagnosticNote}>
+            <Ionicons name="alert-circle-outline" size={23} color={colors.red} />
+            <AppText variant="caption" color={colors.red} style={{ flex: 1 }}>
+              {storageDiagnostic ? `Device ledger: ${storageDiagnostic}` : apiDiagnostic}
+            </AppText>
+          </View>
+        ) : null}
 
         <View style={styles.safetyNote}>
           <Ionicons name="lock-closed-outline" size={23} color={colors.muted} />
           <AppText variant="caption" color={colors.muted} style={{ flex: 1 }}>
             Offline is not an error, so there is no retry button. Operations remain on this device
-            and use their original idempotency keys.
+            and retain their keys. New shipments first recover or register an isolated run, then
+            recover or send the exact server-issued operation.
           </AppText>
         </View>
 
         <TechnicalDetails title="Demo controls and diagnostics">
-          <TechnicalRow label="Persistence" value="AsyncStorage / schema v1" />
+          <TechnicalRow label="Persistence" value="SQLite KV / schema v2" />
+          <TechnicalRow label="API endpoint" value={apiBaseUrl} />
+          <TechnicalRow label="API status" value={apiConnectionStatus} />
           <TechnicalRow label="Queue record count" value={String(state.queue.length)} />
           <TechnicalRow label="Conflict policy" value="No overwrite / explicit safe outcome" />
           <View style={{ paddingVertical: 12 }}>
@@ -369,5 +431,13 @@ const styles = StyleSheet.create({
     gap: 11,
     alignItems: 'flex-start',
   },
+  diagnosticNote: {
+    padding: 12,
+    borderLeftColor: colors.red,
+    borderLeftWidth: 3,
+    backgroundColor: colors.redSoft,
+    flexDirection: 'row',
+    gap: 11,
+    alignItems: 'flex-start',
+  },
 });
-

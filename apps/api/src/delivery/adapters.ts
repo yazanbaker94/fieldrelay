@@ -34,13 +34,16 @@ function localSimulator(mode: SimulatorMode = "success"): AdapterResult {
   };
 }
 
-function safeResponseBody(body: string): Record<string, unknown> {
+function safeResponseBody(body: string, truncated = false): Record<string, unknown> {
   if (!body) return {};
-  try {
-    return JSON.parse(body) as Record<string, unknown>;
-  } catch {
-    return { body: body.slice(0, 2_000) };
+  if (!truncated) {
+    try {
+      return JSON.parse(body) as Record<string, unknown>;
+    } catch {
+      // Preserve a bounded text diagnostic below.
+    }
   }
+  return { body: body.slice(0, 2_000), ...(truncated ? { truncated: true } : {}) };
 }
 
 abstract class HttpDeliveryAdapter implements DeliveryAdapter {
@@ -62,9 +65,12 @@ abstract class HttpDeliveryAdapter implements DeliveryAdapter {
           ...this.buildHeaders(job)
         },
         body: JSON.stringify(this.buildBody(outbox)),
-        signal: AbortSignal.timeout(10_000)
+        signal: AbortSignal.timeout(10_000),
+        redirect: "error"
       });
-      const responseBody = safeResponseBody(await response.text());
+      const rawResponseBody = await response.text();
+      const responseWasTruncated = rawResponseBody.length > 64 * 1024;
+      const responseBody = safeResponseBody(rawResponseBody.slice(0, 64 * 1024), responseWasTruncated);
       if (response.ok) {
         return { httpStatus: response.status, outcome: "SUCCEEDED", response: responseBody };
       }

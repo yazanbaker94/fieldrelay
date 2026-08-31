@@ -4,7 +4,10 @@
 
 ```text
 Android / SQLite queue
-        │ operationId + idempotencyKey + baseVersion + deviceTimestamp
+        │ stable registration key for new public-demo shipments
+        ▼
+Isolated run registration
+        │ exact server-issued scoped operation + local→server mapping
         ▼
 Fastify domain API
         │ exact rule evaluation + optimistic version check
@@ -34,7 +37,7 @@ the shipment remains `RECEIVED`, the exception becomes `DISCREPANCY_OPEN`, and d
 
 ## Idempotency invariant
 
-An operation key maps to one stored result. If a network response is lost, the client checks or retries using that same key. The service returns the original result and does not apply the domain mutation again. A reused key with different content is rejected.
+An operation key maps to one stored result. If a network response is lost, the client checks or retries using that same key. The service returns the original result and does not apply the domain mutation again. A reused key with different content is rejected. Public mobile creation uses this invariant twice: once to recover the isolated-run registration and once to recover its exact server-issued create operation. The offered quantity is fingerprinted at registration, while actor identity and writable resource scope remain server controlled.
 
 ## Audit invariant
 

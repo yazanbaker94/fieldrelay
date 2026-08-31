@@ -49,7 +49,7 @@ function ManifestRow({
 }
 
 export function ReviewScreen() {
-  const { goBack, navigate, saveDemoShipment } = useFieldRelay();
+  const { draft, goBack, navigate, saveDemoShipment, storageDiagnostic } = useFieldRelay();
   const [unitOpen, setUnitOpen] = useState(true);
 
   return (
@@ -59,7 +59,7 @@ export function ReviewScreen() {
       footer={
         <PrimaryButton
           label="SAVE ON THIS DEVICE"
-          onPress={saveDemoShipment}
+          onPress={() => void saveDemoShipment()}
           accessibilityHint="Stores this shipment locally and adds one idempotent sync operation"
         />
       }
@@ -70,7 +70,7 @@ export function ReviewScreen() {
         </Pressable>
         <View style={styles.headerRecord}>
           <AppText variant="mono" color={colors.muted}>
-            FR / NEW / 04
+            {draft.shipmentId.replaceAll('-', ' / ')}
           </AppText>
         </View>
       </View>
@@ -82,17 +82,17 @@ export function ReviewScreen() {
         </View>
 
         <View style={styles.manifest}>
-          <ManifestRow label="Generator" value="Northstar Energy" onEdit={() => navigate('CREATE')} />
-          <ManifestRow label="Site" value="Alder Creek 14" onEdit={() => navigate('CREATE')} />
+          <ManifestRow label="Generator" value={draft.generator} onEdit={() => navigate('CREATE')} />
+          <ManifestRow label="Site" value={draft.site} onEdit={() => navigate('CREATE')} />
           <ManifestRow
             label="Offer"
-            value="8,200 L"
-            detail="07 May 2026, 09:12"
+            value={`${draft.offeredQuantityLiters.toLocaleString('en-CA')} L`}
+            detail="Saved with the device timestamp"
             mono
             onEdit={() => navigate('CREATE')}
           />
-          <ManifestRow label="Driver" value="Marcus Lee" onEdit={() => navigate('CREATE')} />
-          <ManifestRow label="Unit" value="PAD 781" mono onEdit={() => navigate('CREATE')} />
+          <ManifestRow label="Driver" value={draft.driver} onEdit={() => navigate('CREATE')} />
+          <ManifestRow label="Unit" value={draft.unit} mono onEdit={() => navigate('CREATE')} />
         </View>
 
         <View style={styles.unitCard}>
@@ -111,10 +111,10 @@ export function ReviewScreen() {
           {unitOpen ? (
             <View style={styles.unitTable}>
               {[
-                ['Unit type', 'Vacuum Truck'],
-                ['Capacity', '12,000 L'],
+                ['Unit type', draft.unitType],
+                ['Capacity', `${draft.capacityLiters.toLocaleString('en-CA')} L`],
                 ['Compartment', '1'],
-                ['Product', 'Waste Oil'],
+                ['Product', draft.product],
                 ['Hazmat', 'No'],
                 ['Notes', '—'],
               ].map(([label, value]) => (
@@ -138,6 +138,14 @@ export function ReviewScreen() {
             </AppText>
           </View>
         </View>
+        {storageDiagnostic ? (
+          <View accessibilityRole="alert" style={styles.storageError}>
+            <Ionicons name="alert-circle-outline" size={22} color={colors.red} />
+            <AppText variant="caption" color={colors.red} style={{ flex: 1 }}>
+              Device save failed: {storageDiagnostic}. FieldRelay has not claimed this record was saved.
+            </AppText>
+          </View>
+        ) : null}
       </View>
     </ScreenFrame>
   );
@@ -236,5 +244,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  storageError: {
+    borderLeftColor: colors.red,
+    borderLeftWidth: 3,
+    paddingLeft: 12,
+    flexDirection: 'row',
+    gap: 12,
+  },
 });
-

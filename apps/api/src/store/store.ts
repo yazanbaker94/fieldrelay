@@ -11,6 +11,8 @@ import type {
 } from "../domain/types.js";
 
 export interface FieldRelayTransaction {
+  acquireLock(key: string): Promise<void>;
+  countDemoRuns(): Promise<number>;
   getShipment(id: string): Promise<Shipment | undefined>;
   insertShipment(shipment: Shipment): Promise<void>;
   updateShipment(shipment: Shipment, expectedVersion: number): Promise<void>;

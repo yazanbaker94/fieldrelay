@@ -1,11 +1,12 @@
+import Link from 'next/link';
 import { RelayMark } from './relay-mark';
 
 export function PublicHeader() {
   return (
     <header className="public-subnav">
-      <a href="/" className="public-wordmark"><RelayMark /><strong>FIELDRELAY</strong></a>
-      <nav aria-label="Public pages"><a href="/#product">Product</a><a href="/architecture">Architecture</a><a href="/docs">Technical decisions</a><a href="/download/android">Android APK</a><a href="https://github.com/yazanbaker94" target="_blank" rel="noreferrer">GitHub</a></nav>
-      <a className="nav-demo" href="/app/overview">Operations ↗</a>
+      <Link href="/" className="public-wordmark"><RelayMark /><strong>FIELDRELAY</strong></Link>
+      <nav aria-label="Public pages"><Link href="/#product">Product</Link><Link href="/architecture">Architecture</Link><Link href="/docs">Technical decisions</Link><Link href="/download/android">Android APK</Link><a href="https://github.com/yazanbaker94/fieldrelay" target="_blank" rel="noreferrer">GitHub</a></nav>
+      <Link className="nav-demo" href="/app/overview">Operations ↗</Link>
     </header>
   );
 }

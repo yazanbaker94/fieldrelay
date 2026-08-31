@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Linking, StyleSheet, View } from 'react-native';
 import { AppText } from '../components/AppText';
+import { normalizeBaseUrl } from '../api/client';
 import { DarkHeader } from '../components/DarkHeader';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenFrame } from '../components/ScreenFrame';
@@ -17,6 +18,7 @@ import { colors, fonts, ledgerCard, spacing } from '../theme';
 export function DiscrepancyScreen() {
   const { goBack } = useFieldRelay();
   const result = calculateDiscrepancy(8_180, 7_940);
+  const operationsUrl = `${normalizeBaseUrl(process.env.EXPO_PUBLIC_API_URL)}/app/exceptions`;
 
   return (
     <ScreenFrame testID="receiver-discrepancy-screen" bottomNav={false}>
@@ -127,7 +129,7 @@ export function DiscrepancyScreen() {
           label="VIEW ON WEB"
           tone="dark"
           icon="open-outline"
-          onPress={() => void Linking.openURL('https://swoop.video/Wiq/demo/exceptions/EX-0037')}
+          onPress={() => void Linking.openURL(operationsUrl)}
         />
       </View>
     </ScreenFrame>
@@ -222,4 +224,3 @@ const styles = StyleSheet.create({
     gap: 11,
   },
 });
-

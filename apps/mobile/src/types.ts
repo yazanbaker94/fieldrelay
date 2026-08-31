@@ -24,13 +24,20 @@ export type DeliveryStatus =
   | 'DLQ'
   | 'DELIVERED';
 
-export type OperationKind =
+export type SyncOperationType =
   | 'CREATE_SHIPMENT'
-  | 'RECORD_PICKUP'
-  | 'RECORD_RECEIPT'
-  | 'RESOLVE_EXCEPTION';
+  | 'OFFER_SHIPMENT'
+  | 'ACCEPT_HANDOFF'
+  | 'CONFIRM_PICKUP'
+  | 'RECORD_RECEIPT';
 
 export type ConflictChoice = 'SEND_FOR_REVIEW' | 'KEEP_DRAFT' | 'USE_SERVER';
+
+export interface Actor {
+  id: string;
+  name: string;
+  role?: string;
+}
 
 export interface ShipmentEvent {
   id: string;
@@ -59,26 +66,48 @@ export interface Shipment {
 }
 
 export interface SyncOperation {
-  localOperationId: string;
+  operationId: string;
   idempotencyKey: string;
+  type: SyncOperationType;
   shipmentId: string;
-  kind: OperationKind;
   status: SyncStatus;
   baseVersion: number;
-  deviceCreatedAt: string;
+  deviceTimestamp: string;
+  actor: Actor;
   payload: Record<string, unknown>;
   attempts: number;
+  registrationIdempotencyKey?: string;
+  serverRunId?: string;
+  serverShipmentId?: string;
   serverOperationId?: string;
+  serverIdempotencyKey?: string;
+  serverVersion?: number;
+  serverResultRecovered?: boolean;
+  lastAttemptAt?: string;
+  nextAttemptAt?: string;
   lastError?: string;
   conflictChoice?: ConflictChoice;
 }
 
+export interface ShipmentDraft {
+  shipmentId: string;
+  generator: string;
+  site: string;
+  offeredQuantityLiters: number;
+  driver: string;
+  unit: string;
+  unitType: string;
+  capacityLiters: number;
+  product: string;
+}
+
 export interface PersistedMobileState {
-  schemaVersion: 1;
+  schemaVersion: 2;
   queue: SyncOperation[];
   cachedHandoffIds: string[];
   demoConnectivity: 'OFFLINE' | 'ONLINE';
   lastSyncAt?: string;
+  lastSavedShipmentId?: string;
 }
 
 export type RootScreen =
@@ -91,4 +120,3 @@ export type RootScreen =
   | 'DISCREPANCY';
 
 export type BottomTab = 'HOME' | 'CREATE' | 'SHIPMENTS' | 'SYNC';
-

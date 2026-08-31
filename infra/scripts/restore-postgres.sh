@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-SCRIPT_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+SCRIPT_HOME=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
 # shellcheck source=common.sh
 . "$SCRIPT_HOME/common.sh"
 
@@ -18,9 +18,9 @@ fi
 
 backup_path=$(realpath -- "$backup_input")
 case "$backup_path" in
-  "$INFRA_DIR"/backups/*) ;;
+  "$BACKUP_ROOT"/*) ;;
   *)
-    printf '%s\n' "Restore input must be inside $INFRA_DIR/backups" >&2
+    printf '%s\n' "Restore input must be inside $BACKUP_ROOT" >&2
     exit 1
     ;;
 esac

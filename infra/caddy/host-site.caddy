@@ -1,0 +1,18 @@
+# FIELDRELAY_HOST_SITE_V1
+# Managed only by FieldRelay's deployment script. AudioFetcher and every other
+# host remain in their existing Caddy files.
+fieldrelay.swoop.video {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	@events path /api/v1/events
+	reverse_proxy @events 127.0.0.1:18042 {
+		flush_interval -1
+	}
+
+	reverse_proxy 127.0.0.1:18042 {
+		health_uri /healthz
+		health_interval 20s
+		health_timeout 5s
+	}
+}

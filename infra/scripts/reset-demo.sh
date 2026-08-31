@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-SCRIPT_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+SCRIPT_HOME=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
 # shellcheck source=common.sh
 . "$SCRIPT_HOME/common.sh"
 
@@ -53,7 +53,7 @@ compose run --rm --no-deps api node dist/cli/seed.js
 compose up -d --no-deps api
 
 attempt=0
-until compose exec -T api node -e "fetch('http://127.0.0.1:4100/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" >/dev/null 2>&1; do
+until compose exec -T api node -e "fetch('http://127.0.0.1:4100/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" >/dev/null 2>&1; do
   attempt=$((attempt + 1))
   if [ "$attempt" -ge 30 ]; then
     printf '%s\n' "API did not become healthy after the reset." >&2

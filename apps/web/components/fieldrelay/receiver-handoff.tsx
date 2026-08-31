@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 export function ReceiverHandoff() {
   const [confirmed, setConfirmed] = useState(false);
 
   if (confirmed) {
-    return <section className="handoff-confirmation"><span>04</span><p>Receipt recorded</p><h1>7,940 L</h1><strong>−240 L / −2.93%</strong><div><b>Discrepancy open</b><p>Your original entry is preserved. The shipment remains under Operations review and has not been delivered externally.</p></div><a href="/demo">Continue guided scenario →</a></section>;
+    return <section className="handoff-confirmation"><span>04</span><p>Receipt recorded</p><h1>7,940 L</h1><strong>−240 L / −2.93%</strong><div><b>Discrepancy open</b><p>Your original entry is preserved. The shipment remains under Operations review and has not been delivered externally.</p></div><Link href="/demo">Continue guided scenario →</Link></section>;
   }
 
   return (

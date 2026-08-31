@@ -2,12 +2,10 @@
 	admin off
 }
 
-# Internal-only liveness endpoint for the container health check.
+# Internal HTTP gateway. The existing host Caddy terminates public TLS and proxies
+# only the FieldRelay hostname to 127.0.0.1:18042. This container never owns the
+# AudioFetcher VPS's public ports or certificate state.
 :8080 {
-	respond /healthz 200
-}
-
-{$FIELDRELAY_DOMAIN:fieldrelay.swoop.video} {
 	encode zstd gzip
 
 	log {
@@ -16,7 +14,6 @@
 	}
 
 	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
@@ -24,14 +21,16 @@
 		-Server
 	}
 
+	respond /healthz 200
+
 	@events path /api/v1/events
 	reverse_proxy @events api:4100 {
 		flush_interval -1
 	}
 
-	@api path /api/* /health
+	@api path /api/* /health /ready
 	reverse_proxy @api api:4100 {
-		health_uri /health
+		health_uri /ready
 		health_interval 20s
 		health_timeout 5s
 	}

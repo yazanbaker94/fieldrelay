@@ -1,18 +1,9 @@
 #!/bin/sh
 set -eu
 
-SCRIPT_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+SCRIPT_HOME=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
 # shellcheck source=common.sh
 . "$SCRIPT_HOME/common.sh"
-
-BACKUP_ROOT="$INFRA_DIR/backups"
-case "$BACKUP_ROOT" in
-  "$PROJECT_DIR"/*) ;;
-  *)
-    printf '%s\n' "Backup directory must remain inside $PROJECT_DIR" >&2
-    exit 1
-    ;;
-esac
 
 mkdir -p "$BACKUP_ROOT"
 umask 077

@@ -1,8 +1,8 @@
-import type { PersistedMobileState, Shipment } from './types';
+import type { PersistedMobileState, Shipment, ShipmentDraft } from './types';
 
 export const DEMO_SHIPMENT: Shipment = {
   id: 'FR-2026-0842',
-  generator: 'Northstar Energy',
+  generator: 'Northstar Field Services',
   site: 'Alder Creek 14',
   driver: 'Marcus Lee',
   unit: 'PAD 781',
@@ -24,7 +24,7 @@ export const DEMO_SHIPMENT: Shipment = {
       time: '09:12',
     },
     {
-      id: 'EV-0283',
+      id: 'EV-0349',
       step: 2,
       label: 'Pickup',
       quantityLitres: 8_180,
@@ -32,7 +32,7 @@ export const DEMO_SHIPMENT: Shipment = {
       time: '10:03',
     },
     {
-      id: 'EV-0309',
+      id: 'EV-0350',
       step: 3,
       label: 'Received',
       quantityLitres: 7_940,
@@ -62,46 +62,61 @@ export const DEMO_SHIPMENTS = [
 ];
 
 export const INITIAL_MOBILE_STATE: PersistedMobileState = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   cachedHandoffIds: ['FR-2026-0842'],
   demoConnectivity: 'OFFLINE',
-  lastSyncAt: '2026-05-07T13:57:00.000Z',
+  lastSyncAt: '2026-08-31T13:57:00+03:00',
   queue: [
     {
-      localOperationId: 'OP-LOCAL-0842-RECEIPT',
+      operationId: 'OP-LOCAL-0842-RECEIPT',
       idempotencyKey: 'device-7A3F:FR-2026-0842:receipt:v3',
       shipmentId: 'FR-2026-0842',
-      kind: 'RECORD_RECEIPT',
+      type: 'RECORD_RECEIPT',
       status: 'WAITING',
-      baseVersion: 2,
-      deviceCreatedAt: '2026-05-07T14:08:00.000Z',
-      payload: { receivedQuantityLitres: 7_940, eventId: 'EV-0309' },
+      baseVersion: 3,
+      deviceTimestamp: '2026-08-31T14:08:00+03:00',
+      actor: { id: 'priya', name: 'Priya Shah', role: 'RECEIVER' },
+      payload: { receivedQuantityLiters: 7_940 },
       attempts: 0,
     },
     {
-      localOperationId: 'OP-LOCAL-0843-CREATE',
+      operationId: 'OP-LOCAL-0843-CREATE',
       idempotencyKey: 'device-7A3F:FR-2026-0843:create:v0',
       shipmentId: 'FR-2026-0843',
-      kind: 'CREATE_SHIPMENT',
+      type: 'CREATE_SHIPMENT',
       status: 'CHECKING_RESULT',
       baseVersion: 0,
-      deviceCreatedAt: '2026-05-07T13:02:00.000Z',
-      payload: { offeredQuantityLitres: 5_600 },
+      deviceTimestamp: '2026-08-31T13:02:00+03:00',
+      actor: { id: 'maya', name: 'Maya Chen', role: 'GENERATOR' },
+      payload: { offeredQuantityLiters: 5_600 },
       attempts: 1,
       lastError: 'Response was interrupted; checking the original idempotency key.',
     },
     {
-      localOperationId: 'OP-LOCAL-0839-CONFLICT',
+      operationId: 'OP-LOCAL-0839-CONFLICT',
       idempotencyKey: 'device-7A3F:FR-2026-0839:pickup:v1',
       shipmentId: 'FR-2026-0839',
-      kind: 'RECORD_PICKUP',
+      type: 'CONFIRM_PICKUP',
       status: 'NEEDS_REVIEW',
       baseVersion: 1,
-      deviceCreatedAt: '2026-05-07T11:04:00.000Z',
-      payload: { pickupQuantityLitres: 6_120 },
+      deviceTimestamp: '2026-08-31T11:04:00+03:00',
+      actor: { id: 'marcus', name: 'Marcus Lee', role: 'DRIVER' },
+      payload: { pickupQuantityLiters: 6_120 },
       attempts: 1,
+      serverVersion: 2,
       lastError: 'Server version 2 is newer than this device entry.',
     },
   ],
 };
 
+export const INITIAL_SHIPMENT_DRAFT: ShipmentDraft = {
+  shipmentId: 'FR-2026-0844',
+  generator: 'Northstar Field Services',
+  site: 'Alder Creek 14',
+  offeredQuantityLiters: 8_200,
+  driver: 'Marcus Lee',
+  unit: 'PAD 781',
+  unitType: 'Vacuum Truck',
+  capacityLiters: 12_000,
+  product: 'Waste Oil',
+};

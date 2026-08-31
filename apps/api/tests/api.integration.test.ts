@@ -56,7 +56,7 @@ describe("FieldRelay API", () => {
       type: "CREATE_SHIPMENT",
       shipmentId: "FR-2026-9999",
       baseVersion: 0,
-      deviceTimestamp: "2026-08-31T08:00:00+03:00",
+      deviceTimestamp: "2026-08-31T08:00:00-06:00",
       actor: { id: "maya", name: "Maya", role: "GENERATOR" },
       payload: { offeredQuantityLiters: 5000 }
     };
@@ -78,7 +78,7 @@ describe("FieldRelay API", () => {
       type: "CREATE_SHIPMENT",
       shipmentId: "FR-2026-9998",
       baseVersion: 0,
-      deviceTimestamp: "2026-08-31T08:00:00+03:00",
+      deviceTimestamp: "2026-08-31T08:00:00-06:00",
       actor: { id: "maya", name: "Maya" },
       payload: {}
     };
@@ -102,7 +102,7 @@ describe("FieldRelay API", () => {
         type: "RECORD_RECEIPT",
         shipmentId: "FR-2026-0842",
         baseVersion: 3,
-        deviceTimestamp: "2026-08-31T14:09:00+03:00",
+        deviceTimestamp: "2026-08-31T14:09:00-06:00",
         actor: { id: "priya", name: "Priya" },
         payload: { receivedQuantityLiters: 8000 }
       }
@@ -131,7 +131,7 @@ describe("FieldRelay API", () => {
         reason: "Receiver reading verified against calibrated meter",
         note: "Both teams reviewed the original reports; accepted quantity recorded separately.",
         actor: { id: "ops-1", name: "Alex Morgan", role: "OPERATIONS" },
-        occurredAt: "2026-08-31T14:30:00+03:00"
+        occurredAt: "2026-08-31T14:30:00-06:00"
       }
     });
     expect(response.statusCode).toBe(200);
@@ -207,5 +207,245 @@ describe("FieldRelay API", () => {
       (attempt) => (attempt.request.headers as Record<string, string>)["idempotency-key"]
     );
     expect(new Set(keys).size).toBe(1);
+  });
+
+  it("creates an isolated, idempotent demo run with a recoverable offline-save operation", async () => {
+    const create = await app.inject({
+      method: "POST",
+      url: "/api/v1/demo/runs",
+      headers: { "idempotency-key": "create-reviewer-a" },
+      payload: { runId: "reviewer-a", offlineOfferedQuantityLiters: 6123 }
+    });
+    expect(create.statusCode).toBe(201);
+    expect(create.json()).toMatchObject({
+      runId: "reviewer-a",
+      isolated: true,
+      replayed: false,
+      resources: {
+        shipmentId: "FR-2026-0842-REVIEWER-A",
+        exceptionId: "EX-0037-REVIEWER-A",
+        deliveryId: "DL-019-REVIEWER-A"
+      },
+      scenario: {
+        organizations: {
+          generator: "Northstar Field Services",
+          carrier: "Prairie Line Transport",
+          receiver: "Copper Ridge Recovery"
+        }
+      },
+      offlineRecovery: {
+        expectedServerMutations: 1,
+        operation: { payload: { offeredQuantityLiters: 6123 } }
+      }
+    });
+
+    const repeatedCreate = await app.inject({
+      method: "POST",
+      url: "/api/v1/demo/runs",
+      headers: { "idempotency-key": "create-reviewer-a" },
+      payload: { runId: "reviewer-a", offlineOfferedQuantityLiters: 6123 }
+    });
+    expect(repeatedCreate.statusCode).toBe(201);
+    expect(repeatedCreate.json()).toMatchObject({ runId: "reviewer-a", replayed: true });
+
+    const changedRegistration = await app.inject({
+      method: "POST",
+      url: "/api/v1/demo/runs",
+      headers: { "idempotency-key": "create-reviewer-a" },
+      payload: { runId: "reviewer-a", offlineOfferedQuantityLiters: 6124 }
+    });
+    expect(changedRegistration.statusCode).toBe(409);
+    expect(changedRegistration.json().error.code).toBe("IDEMPOTENCY_KEY_REUSED");
+
+    const offlineOperation = create.json().offlineRecovery.operation;
+    const firstSync = await app.inject({
+      method: "POST",
+      url: "/api/v1/sync/operations",
+      payload: offlineOperation
+    });
+    const recoveredByRetry = await app.inject({
+      method: "POST",
+      url: "/api/v1/sync/operations",
+      payload: offlineOperation
+    });
+    const recoveredByLookup = await app.inject({
+      method: "GET",
+      url: create.json().offlineRecovery.resultPath
+    });
+    expect(firstSync.statusCode).toBe(201);
+    expect(recoveredByRetry.statusCode).toBe(201);
+    expect(recoveredByRetry.json()).toMatchObject({ replayed: true, recovery: "ORIGINAL_RESULT_RETURNED" });
+    expect(recoveredByLookup.statusCode).toBe(201);
+    expect(recoveredByLookup.json()).toMatchObject({ replayed: true, recovery: "ORIGINAL_RESULT_RETURNED" });
+
+    const snapshot = await store.snapshot();
+    expect(snapshot.shipments.filter((shipment) => shipment.id === offlineOperation.shipmentId)).toHaveLength(1);
+    expect(snapshot.shipments.find((shipment) => shipment.id === offlineOperation.shipmentId)).toMatchObject({
+      offeredQuantityLiters: 6123
+    });
+    expect(snapshot.auditEvents.filter((event) => event.shipmentId === offlineOperation.shipmentId)).toHaveLength(2);
+    expect(snapshot.shipments.find((shipment) => shipment.id === "FR-2026-0842")).toMatchObject({
+      version: 4,
+      exceptionStatus: "DISCREPANCY_OPEN",
+      deliveryStatus: "NOT_STARTED"
+    });
+
+    const defaultList = await app.inject({ method: "GET", url: "/api/v1/shipments" });
+    expect(defaultList.json().items.map((shipment: { id: string }) => shipment.id)).toEqual(["FR-2026-0842"]);
+    const runList = await app.inject({ method: "GET", url: "/api/v1/shipments?runId=reviewer-a" });
+    expect(runList.json().items.map((shipment: { id: string }) => shipment.id).sort()).toEqual([
+      "FR-2026-0842-REVIEWER-A",
+      "FR-2026-0842-REVIEWER-A-OFFLINE"
+    ]);
+    const recoveredRun = await app.inject({ method: "GET", url: "/api/v1/demo/runs/reviewer-a" });
+    expect(recoveredRun.json().offlineRecovery.operation).toEqual(offlineOperation);
+  });
+
+  it("keeps one reviewer's resolution and delivery state isolated from the canonical baseline", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/demo/runs",
+      headers: { "idempotency-key": "create-isolated-b" },
+      payload: { runId: "isolated-b" }
+    });
+    const resources = created.json().resources;
+    const resolution = await app.inject({
+      method: "POST",
+      url: `/api/v1/exceptions/${resources.exceptionId}/resolve`,
+      headers: { "idempotency-key": "resolve-isolated-b" },
+      payload: {
+        category: "DOCUMENTED_TRANSFER_LOSS",
+        acceptedFinalQuantityLiters: 7940,
+        reason: "Receiver reading verified against calibrated meter",
+        note: "Jordan preserved both original reports and recorded a separate accepted quantity.",
+        actor: { id: "jordan-patel", name: "Jordan Patel", role: "OPERATIONS" },
+        occurredAt: "2026-08-31T14:30:00-06:00"
+      }
+    });
+    expect(resolution.statusCode).toBe(200);
+    expect(resolution.json().delivery.id).toBe("DL-019-ISOLATED-B");
+
+    const run = await app.inject({ method: "GET", url: "/api/v1/demo/runs/isolated-b" });
+    expect(run.json()).toMatchObject({
+      shipment: { lifecycleStatus: "COMPLETED", exceptionStatus: "RESOLVED", deliveryStatus: "PENDING" },
+      delivery: { id: "DL-019-ISOLATED-B", status: "PENDING" }
+    });
+    const canonical = await app.inject({ method: "GET", url: "/api/v1/demo" });
+    expect(canonical.json().shipment).toMatchObject({
+      lifecycleStatus: "RECEIVED",
+      exceptionStatus: "DISCREPANCY_OPEN",
+      deliveryStatus: "NOT_STARTED"
+    });
+  });
+
+  it("serializes concurrent claims for one requested run ID", async () => {
+    const [left, right] = await Promise.all([
+      app.inject({
+        method: "POST",
+        url: "/api/v1/demo/runs",
+        headers: { "idempotency-key": "concurrent-run-left" },
+        payload: { runId: "same-run" }
+      }),
+      app.inject({
+        method: "POST",
+        url: "/api/v1/demo/runs",
+        headers: { "idempotency-key": "concurrent-run-right" },
+        payload: { runId: "same-run" }
+      })
+    ]);
+    expect([left.statusCode, right.statusCode].sort()).toEqual([201, 409]);
+    const conflict = left.statusCode === 409 ? left : right;
+    expect(conflict.json().error.code).toBe("DEMO_RUN_EXISTS");
+    expect((await store.snapshot()).shipments.filter((shipment) => shipment.id === "FR-2026-0842-SAME-RUN")).toHaveLength(1);
+  });
+
+  it("rejects unknown fields, malformed filters, oversized bodies, and pre-opening resolutions", async () => {
+    const unknownField = await app.inject({
+      method: "POST",
+      url: "/api/v1/exceptions/EX-0037/resolve",
+      headers: { "idempotency-key": "invalid-extra-field" },
+      payload: {
+        category: "DOCUMENTED_TRANSFER_LOSS",
+        acceptedFinalQuantityLiters: 7940,
+        reason: "Verified",
+        note: "Original reports preserved",
+        actor: { id: "jordan-patel", name: "Jordan Patel" },
+        overwriteOriginalQuantity: true
+      }
+    });
+    expect(unknownField.statusCode).toBe(400);
+    expect(unknownField.json().error.code).toBe("VALIDATION_ERROR");
+
+    const malformedFilter = await app.inject({ method: "GET", url: "/api/v1/shipments?includeDemoRuns=1" });
+    expect(malformedFilter.statusCode).toBe(400);
+
+    const beforeOpening = await app.inject({
+      method: "POST",
+      url: "/api/v1/exceptions/EX-0037/resolve",
+      headers: { "idempotency-key": "invalid-resolution-time" },
+      payload: {
+        category: "DOCUMENTED_TRANSFER_LOSS",
+        acceptedFinalQuantityLiters: 7940,
+        reason: "Verified",
+        note: "Original reports preserved",
+        actor: { id: "jordan-patel", name: "Jordan Patel" },
+        occurredAt: "2026-08-31T13:00:00-06:00"
+      }
+    });
+    expect(beforeOpening.statusCode).toBe(400);
+    expect(beforeOpening.json().error.code).toBe("VALIDATION_ERROR");
+
+    const oversized = await app.inject({
+      method: "POST",
+      url: "/api/v1/sync/operations",
+      headers: { "content-type": "application/json" },
+      payload: JSON.stringify({ padding: "x".repeat(70_000) })
+    });
+    expect(oversized.statusCode).toBe(413);
+    expect(oversized.json().error.code).toBe("PAYLOAD_TOO_LARGE");
+    expect((await store.snapshot()).exceptions[0]?.status).toBe("DISCREPANCY_OPEN");
+  });
+
+  it("keeps a failed manual replay in DLQ so another explicit replay remains possible", async () => {
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/exceptions/EX-0037/resolve",
+      headers: { "idempotency-key": "resolve-for-replay-retry" },
+      payload: {
+        category: "DOCUMENTED_TRANSFER_LOSS",
+        acceptedFinalQuantityLiters: 7940,
+        reason: "Verified",
+        note: "Accepted separately after review",
+        actor: { id: "jordan-patel", name: "Jordan Patel" }
+      }
+    });
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      await app.inject({
+        method: "POST",
+        url: "/api/v1/deliveries/DL-019/attempt",
+        headers: { "idempotency-key": `replay-retry-attempt-${attempt}` },
+        payload: { simulatorMode: "retryable-failure" }
+      });
+    }
+
+    const failedReplay = await app.inject({
+      method: "POST",
+      url: "/api/v1/deliveries/DL-019/replay",
+      headers: { "idempotency-key": "failed-manual-replay" },
+      payload: { simulatorMode: "retryable-failure", actor: { id: "jordan-patel", name: "Jordan Patel" } }
+    });
+    expect(failedReplay.json().delivery.status).toBe("DLQ");
+
+    const successfulReplay = await app.inject({
+      method: "POST",
+      url: "/api/v1/deliveries/DL-019/replay",
+      headers: { "idempotency-key": "successful-manual-replay" },
+      payload: { simulatorMode: "success", actor: { id: "jordan-patel", name: "Jordan Patel" } }
+    });
+    expect(successfulReplay.statusCode).toBe(200);
+    expect(successfulReplay.json()).toMatchObject({
+      delivery: { status: "DELIVERED", attemptCount: 5 },
+      attempt: { attemptNumber: 5, kind: "MANUAL_REPLAY", outcome: "SUCCEEDED" }
+    });
   });
 });

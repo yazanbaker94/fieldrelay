@@ -24,7 +24,7 @@ The demo must visibly prove the following:
 
 - A user can create and sign a shipment while offline.
 - The Android application stores the operation locally and clearly communicates its sync state.
-- Reconnecting synchronizes exactly once, even if a request is replayed.
+- Reconnecting synchronizes idempotently, even if a request is replayed.
 - Generator, driver, and receiver actions form one traceable shipment history.
 - A quantity mismatch becomes a discrepancy; it does not silently overwrite history.
 - An operations user can investigate and resolve the discrepancy.
@@ -1349,4 +1349,3 @@ The project is ready to send only when:
 - No WiQ trademarks, copied interface, or compliance claims appear.
 - No real customer data or secrets are present.
 - The product looks authored and operational, not template-generated.
-

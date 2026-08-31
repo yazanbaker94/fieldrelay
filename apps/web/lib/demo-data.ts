@@ -26,7 +26,7 @@ export const demoShipment = {
 
 export const shipmentEvents = [
   { no: '01', id: 'EV-0347', title: 'Generator offer', actor: 'Maya Chen', time: '09:12 MDT', quantity: '8,200 L', meta: 'Android · saved offline', tone: 'neutral' as Tone },
-  { no: '02', id: 'EV-0351', title: 'Offer synchronized', actor: 'Field device', time: '09:18 MDT', quantity: 'Exactly once', meta: 'op_01J6FR84 · attempt 02', tone: 'blue' as Tone },
+  { no: '02', id: 'EV-0351', title: 'Offer synchronized', actor: 'Field device', time: '09:18 MDT', quantity: 'One mutation', meta: 'op_01J6FR84 · attempt 02', tone: 'blue' as Tone },
   { no: '03', id: 'EV-0358', title: 'Driver pickup', actor: 'Marcus Lee', time: '10:03 MDT', quantity: '8,180 L', meta: '−20 L / −0.24%', tone: 'neutral' as Tone },
   { no: '04', id: 'EV-0369', title: 'Receiver report', actor: 'Priya Shah', time: '14:08 MDT', quantity: '7,940 L', meta: '−240 L / −2.93%', tone: 'warning' as Tone },
   { no: '05', id: 'EV-0370', title: 'Discrepancy opened', actor: 'Rules engine', time: '14:08 MDT', quantity: 'EX / 0037', meta: '>100 L AND >1%', tone: 'warning' as Tone },

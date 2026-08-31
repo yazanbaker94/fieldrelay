@@ -1,4 +1,4 @@
-FROM node:22.14.0-bookworm-slim AS build
+FROM node:22.23.2-bookworm-slim AS build
 
 ENV WRANGLER_SEND_METRICS=false \
     WRANGLER_WRITE_LOGS=false
@@ -10,7 +10,7 @@ RUN npm ci
 COPY apps/web/ ./
 RUN npm run build
 
-FROM node:22.14.0-bookworm-slim AS runtime
+FROM node:22.23.2-bookworm-slim AS runtime
 
 ENV NODE_ENV=production \
     WRANGLER_SEND_METRICS=false \

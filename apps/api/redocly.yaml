@@ -1,0 +1,10 @@
+extends:
+  - recommended
+
+rules:
+  # This independent portfolio prototype is intentionally unlicensed rather
+  # than publishing a misleading license declaration in its API metadata.
+  info-license: off
+  # Public read-only health/meta operations have no meaningful client-error
+  # branch. Mutating and parameterized operations document their 4xx results.
+  operation-4xx-response: off

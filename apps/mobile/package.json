@@ -12,6 +12,7 @@
     "expo-font": "~57.0.2",
     "expo-haptics": "~57.0.2",
     "expo-splash-screen": "~57.0.8",
+    "expo-sqlite": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.3",
     "react": "19.2.3",
@@ -33,7 +34,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prebuild:android": "expo prebuild --platform android",
-    "build:android:debug": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build-debug-apk.ps1"
+    "build:android:debug": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build-debug-apk.ps1",
+    "build:android:release": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build-release-apk.ps1",
+    "signing:android:local": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/ensure-release-signing.ps1"
   },
   "private": true
 }

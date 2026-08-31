@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Package relocatable deployment files
         shell: bash
-        run: tar -czf fieldrelay-operations-${GITHUB_SHA}.tar.gz infra docs/deployment
+        run: tar -czf "fieldrelay-operations-${GITHUB_SHA}.tar.gz" infra docs/deployment
       - uses: actions/upload-artifact@v4
         with:
           name: fieldrelay-operations-${{ github.sha }}

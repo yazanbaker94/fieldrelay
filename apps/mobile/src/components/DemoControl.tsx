@@ -21,7 +21,7 @@ export function DemoControl() {
         accessibilityRole="switch"
         accessibilityState={{ checked: demoOnline }}
         accessibilityLabel="Toggle simulated network"
-        onPress={toggleDemoConnectivity}
+        onPress={() => void toggleDemoConnectivity()}
         style={({ pressed }) => [styles.control, pressed && { opacity: 0.72 }]}
       >
         <Ionicons
@@ -65,4 +65,3 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 });
-

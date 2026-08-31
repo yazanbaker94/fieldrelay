@@ -1,3 +1,5 @@
+import Image from 'next/image';
+import Link from 'next/link';
 import { TechnologyRail } from '@/components/fieldrelay/technology-rail';
 
 const lifecycle = [
@@ -20,7 +22,7 @@ const chapters = [
   { number: '01', title: 'Field', copy: 'Capture the first record without a signal.' },
   { number: '02', title: 'Handoff', copy: 'Carry identity and evidence across teams.' },
   { number: '03', title: 'Exception', copy: 'Keep every report; resolve the difference.' },
-  { number: '04', title: 'Recovery', copy: 'Replay the final delivery without duplication.' },
+  { number: '04', title: 'Recovery', copy: 'Replay with one stable destination key.' },
 ];
 
 function RelayMark() {
@@ -39,22 +41,22 @@ export default function Home() {
   return (
     <main className="site-shell">
       <header className="utility-nav">
-        <a className="wordmark" href="#top" aria-label="FieldRelay home">
+        <Link className="wordmark" href="#top" aria-label="FieldRelay home">
           <RelayMark />
           <span>FIELDRELAY</span>
-        </a>
+        </Link>
 
         <nav className="desktop-nav" aria-label="Primary navigation">
-          <a href="#product">Product</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#architecture">Architecture</a>
-          <a href="#decisions">Technical decisions</a>
-          <a href="https://github.com/yazanbaker94" target="_blank" rel="noreferrer">GitHub</a>
+          <Link href="#product">Product</Link>
+          <Link href="#how-it-works">How it works</Link>
+          <Link href="#architecture">Architecture</Link>
+          <Link href="#decisions">Technical decisions</Link>
+          <a href="https://github.com/yazanbaker94/fieldrelay" target="_blank" rel="noreferrer">GitHub</a>
         </nav>
 
-        <a className="nav-demo" href="/demo">
+        <Link className="nav-demo" href="/demo">
           Run demo <span aria-hidden="true">↗</span>
-        </a>
+        </Link>
       </header>
 
       <section className="hero" id="top">
@@ -75,8 +77,8 @@ export default function Home() {
             The full story is always here.
           </p>
           <div className="hero-actions">
-            <a className="primary-action" href="/demo">Run the 90-second demo</a>
-            <a className="text-action" href="#walkthrough">Watch walkthrough <span aria-hidden="true">→</span></a>
+            <Link className="primary-action" href="/demo">Run the 90-second demo</Link>
+            <Link className="text-action" href="#walkthrough">Watch walkthrough <span aria-hidden="true">→</span></Link>
           </div>
           <dl className="proof-row" aria-label="System guarantees">
             <div><dt>Capture</dt><dd>Offline-first</dd></div>
@@ -116,7 +118,7 @@ export default function Home() {
       </section>
 
       <figure className="industrial-strip" aria-label="A tanker moving through an industrial route">
-        <img src="/assets/editorial/industrial-tanker-route-primary.png" alt="Tanker truck travelling past a refinery at dusk" />
+        <Image src="/assets/editorial/industrial-tanker-route-primary.png" alt="Tanker truck travelling past a refinery at dusk" width={2172} height={724} priority />
       </figure>
 
       <section className="chapter-rail" id="product" aria-label="FieldRelay shipment story">
@@ -147,7 +149,7 @@ export default function Home() {
       </section>
 
       <section className="mobile-proof-section">
-        <div className="proof-copy"><p>01 / Field</p><h2>Field work that remains trustworthy offline.</h2><p>The Android client makes local safety visible. Every pending action has a human description, a saved time, and a clear next step; technical identifiers stay available without becoming the interface.</p><a href="/download/android">Get the Android APK →</a></div>
+        <div className="proof-copy"><p>01 / Field</p><h2>Field work that remains trustworthy offline.</h2><p>The Android client makes local safety visible. Every pending action has a human description, a saved time, and a clear next step; technical identifiers stay available without becoming the interface.</p><Link href="/download/android">Get the Android APK →</Link></div>
         <div className="mobile-ledger-preview" aria-label="FieldRelay Android offline home preview">
           <header><span>FIELDRELAY</span><code>09:14</code></header>
           <div className="mobile-preview-title"><div><p>Maya Chen / Generator</p><h3>Offline</h3></div><span>2</span></div>
@@ -161,7 +163,7 @@ export default function Home() {
       </section>
 
       <section className="operations-proof-section">
-        <header><p>03 / Exception</p><h2>Exceptions become workflows,<br />not phone calls.</h2><a href="/app/exceptions/EX-0037">Open workbench ↗</a></header>
+        <header><p>03 / Exception</p><h2>Exceptions become workflows,<br />not phone calls.</h2><Link href="/app/exceptions/EX-0037">Open workbench ↗</Link></header>
         <div className="immutable-preview">
           <div className="immutable-heading"><span>EX / 0037</span><strong>Immutable quantity evidence</strong><b>Discrepancy open</b></div>
           <ol><li><span>01</span><p>Generator offer<small>Maya Chen · 09:12 · EV-0347</small></p><strong>8,200 L</strong></li><li><span>02</span><p>Driver pickup<small>Marcus Lee · 10:03</small></p><strong>8,180 L</strong></li><li className="is-warning"><span>03</span><p>Receiver<small>Priya Shah · 14:08</small></p><strong>7,940 L<small>−240 / −2.93%</small></strong></li></ol>
@@ -170,24 +172,24 @@ export default function Home() {
       </section>
 
       <section className="integration-story" id="walkthrough">
-        <div className="proof-copy"><p>04 / Recovery</p><h2>External delivery you can observe and recover.</h2><p>Completion creates a transactional outbox record. Delivery attempts remain inspectable through backoff, dead-lettering, and manual replay with one stable destination idempotency key.</p><a href="/app/integrations/DL-019">Inspect DL / 019 →</a></div>
+        <div className="proof-copy"><p>04 / Recovery</p><h2>External delivery you can observe and recover.</h2><p>Completion creates a transactional outbox record. Delivery attempts remain inspectable through backoff, dead-lettering, and manual replay with one stable destination idempotency key.</p><Link href="/app/integrations/DL-019">Inspect DL / 019 →</Link></div>
         <ol className="homepage-attempts"><li><time>14:33:02</time><span>Attempt 1</span><b>503</b></li><li><time>14:34:05</time><span>Attempt 2</span><b>503</b></li><li><time>14:36:11</time><span>Attempt 3</span><b>503</b></li><li className="is-dlq"><time>14:37:12</time><span>Moved to DLQ</span><b>Review</b></li><li className="is-replay"><time>14:41:28</time><span>Manual replay</span><b>04</b></li><li className="is-success"><time>14:41:29</time><span>Attempt 4</span><b>200 OK</b></li></ol>
       </section>
 
       <section className="homepage-architecture" id="architecture">
         <div><p>One domain model / every boundary</p><h2>Mobile, web, database, and delivery speak in events.</h2></div>
         <ol><li><span>01</span><strong>Android</strong><small>Offline operations</small></li><li><i>→</i></li><li><span>02</span><strong>Node API</strong><small>Rules + idempotency</small></li><li><i>→</i></li><li><span>03</span><strong>PostgreSQL</strong><small>Audit + outbox</small></li><li><i>→</i></li><li><span>04</span><strong>Delivery</strong><small>Retry + DLQ</small></li></ol>
-        <a href="/architecture">Read the architecture →</a>
+        <Link href="/architecture">Read the architecture →</Link>
       </section>
       <TechnologyRail />
 
       <section className="ownership-section" id="decisions">
         <aside><span>WHY / BUILT / 01</span></aside>
-        <div><p>Built for one real Calgary software role</p><h2>Product ownership,<br />not just UI implementation.</h2><p>I built FieldRelay after studying public industrial field workflows and the reliability risks around low-connectivity, multi-party records. It combines my React and Node.js work with offline synchronization, production troubleshooting, AWS queue concepts, and enterprise API integration.</p><div><a href="/docs">Technical decisions</a><a href="https://github.com/yazanbaker94" target="_blank" rel="noreferrer">View source ↗</a></div></div>
+        <div><p>Built for one real Calgary software role</p><h2>Product ownership,<br />not just UI implementation.</h2><p>I built FieldRelay after studying public industrial field workflows and the reliability risks around low-connectivity, multi-party records. It combines my React and Node.js work with offline synchronization, production troubleshooting, AWS queue concepts, and enterprise API integration.</p><div><Link href="/docs">Technical decisions</Link><a href="https://github.com/yazanbaker94/fieldrelay" target="_blank" rel="noreferrer">View source ↗</a></div></div>
       </section>
 
       <section className="final-demo-cta">
-        <p>FR / GUIDED / 90 SEC</p><h2>See the complete failure-and-recovery flow.</h2><div><a href="/demo">Start guided demo</a><a href="/app/overview">Explore operations →</a></div>
+        <p>FR / GUIDED / 90 SEC</p><h2>See the complete failure-and-recovery flow.</h2><div><Link href="/demo">Start guided demo</Link><Link href="/app/overview">Explore operations →</Link></div>
       </section>
 
       <footer className="prototype-note">

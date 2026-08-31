@@ -35,6 +35,11 @@ web-scaffold/
 **/.env.local
 **/*.jks
 **/*.keystore
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/.env.*
 !**/.env.example
 
 # Editors and operating systems

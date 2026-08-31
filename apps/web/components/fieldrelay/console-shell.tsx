@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { RelayMark } from './relay-mark';
 
@@ -28,24 +29,24 @@ export function ConsoleShell({
   return (
     <main className="console-frame">
       <aside className="console-sidebar">
-        <a className="console-brand" href="/" aria-label="FieldRelay public site">
+        <Link className="console-brand" href="/" aria-label="FieldRelay public site">
           <RelayMark compact />
           <strong>F/R</strong>
-        </a>
+        </Link>
         <nav aria-label="Operations console">
           {sections.map((section) => (
-            <a key={section.key} href={section.href} className={active === section.key ? 'is-active' : undefined}>
+            <Link key={section.key} href={section.href} className={active === section.key ? 'is-active' : undefined}>
               <span>{section.no}</span>
               <b>{section.label}</b>
               {section.count && <i>{section.count}</i>}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="demo-console-block">
           <p><i /> Demo mode</p>
           <strong>Jordan Patel</strong>
           <span>Operations</span>
-          <a href="/demo">Relay trace ↗</a>
+          <Link href="/demo">Relay trace ↗</Link>
         </div>
       </aside>
 
@@ -57,7 +58,7 @@ export function ConsoleShell({
             <input aria-label="Search shipments, events, and people" placeholder="SEARCH SHIPMENTS, EVENTS, PEOPLE" />
             <kbd>⌘ K</kbd>
           </label>
-          <a className="guided-control" href="/demo">Run guided demo</a>
+          <Link className="guided-control" href="/demo">Run guided demo</Link>
         </header>
 
         <div className="console-titlebar">

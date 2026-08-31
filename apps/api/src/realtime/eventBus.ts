@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 
 export interface RealtimeEvent {
   id: string;
-  type: "shipment.changed" | "exception.changed" | "delivery.changed" | "sync.conflict";
+  type: "shipment.changed" | "exception.changed" | "delivery.changed" | "sync.conflict" | "demo.run.created";
   occurredAt: string;
   data: Record<string, unknown>;
 }

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { ConsoleShell } from '@/components/fieldrelay/console-shell';
 import { LiveApiProof } from '@/components/fieldrelay/live-api-proof';
 import { StatusLabel } from '@/components/fieldrelay/status-label';
@@ -17,7 +18,7 @@ export default function OverviewPage() {
         <section className="work-panel">
           <header className="panel-head">
             <div><p>Queue / priority ordered</p><h2>Needs attention</h2></div>
-            <a href="/app/exceptions">Open queue →</a>
+            <Link href="/app/exceptions">Open queue →</Link>
           </header>
           <ul className="operational-list">
             <li>
@@ -39,7 +40,7 @@ export default function OverviewPage() {
         </section>
 
         <section className="work-panel">
-          <header className="panel-head"><div><p>Runtime</p><h2>System relay</h2></div><a href="/app/system">Inspect →</a></header>
+          <header className="panel-head"><div><p>Runtime</p><h2>System relay</h2></div><Link href="/app/system">Inspect →</Link></header>
           <div className="system-rows">
             <LiveApiProof />
             <div><span>API</span><StatusLabel tone="success">Healthy</StatusLabel></div>
@@ -52,7 +53,7 @@ export default function OverviewPage() {
       </div>
 
       <section className="work-panel activity-panel">
-        <header className="panel-head"><div><p>Append-only stream</p><h2>Recent shipment activity</h2></div><a href="/app/audit">Full audit →</a></header>
+        <header className="panel-head"><div><p>Append-only stream</p><h2>Recent shipment activity</h2></div><Link href="/app/audit">Full audit →</Link></header>
         <ul className="activity-ledger">
           {shipments.slice(0, 5).map((shipment, index) => (
             <li key={shipment.id}>

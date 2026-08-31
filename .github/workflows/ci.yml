@@ -14,6 +14,22 @@ permissions:
 jobs:
   api:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env:
+          POSTGRES_DB: fieldrelay_ci
+          POSTGRES_USER: fieldrelay_ci
+          POSTGRES_PASSWORD: fieldrelay-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fieldrelay_ci -d fieldrelay_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://fieldrelay_ci:fieldrelay-ci-only@127.0.0.1:5432/fieldrelay_ci
     defaults:
       run:
         working-directory: apps/api
@@ -21,7 +37,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.14.0
+          node-version: 22.23.2
           cache: npm
           cache-dependency-path: apps/api/package-lock.json
       - run: npm ci
@@ -38,7 +54,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.14.0
+          node-version: 22.23.2
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
@@ -54,30 +70,32 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.14.0
+          node-version: 22.23.2
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
       - run: npm ci
-      # The package currently exposes Expo launch scripts only; these commands use
-      # its pinned TypeScript and Vitest binaries without altering package.json.
-      - run: npx tsc --noEmit
-      - run: npx vitest run
+      - run: npm run typecheck
+      - run: npm test
 
   containers:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Validate Compose interpolation
-        run: docker compose --env-file infra/.env.example -f infra/compose.yaml config --quiet
-      - name: Validate Caddy configuration
-        run: >-
-          docker run --rm
-          -e FIELDRELAY_DOMAIN=fieldrelay.example
-          -v "$PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
-          caddy:2-alpine
-          caddy validate --config /etc/caddy/Caddyfile
+        run: docker compose -p fieldrelay --env-file infra/.env.example -f infra/compose.yaml config --quiet
+      - name: Validate Caddy configurations
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.4-alpine \
+            caddy validate --config /etc/caddy/Caddyfile
+          docker run --rm \
+            -v "$PWD/infra/caddy/host-site.caddy:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.4-alpine \
+            caddy validate --config /etc/caddy/Caddyfile
       - name: Check operations scripts
-        run: shellcheck infra/scripts/*.sh
+        run: shellcheck -x -P infra/scripts infra/scripts/*.sh
       - name: Build API image
         run: docker build -f infra/docker/api.Dockerfile -t fieldrelay-api:ci .
       - name: Build web image

@@ -18,6 +18,15 @@ import type {
 import type { FieldRelayStore, FieldRelayTransaction } from "../store/store.js";
 import { DeliveryAdapterRegistry, type SimulatorMode } from "../delivery/adapters.js";
 import { FieldRelayEventBus } from "../realtime/eventBus.js";
+import {
+  canonicalDemoScenario,
+  createDemoRunSnapshot,
+  demoDeliveryIdForShipment,
+  demoOfflineRecoveryOperation,
+  demoResourceIds,
+  insertSnapshot
+} from "../seed/demoSeed.js";
+import type { RealtimeEvent } from "../realtime/eventBus.js";
 
 interface ServiceResult {
   statusCode: number;
@@ -40,6 +49,13 @@ export interface ProcessDeliveryInput {
   actor: Actor;
 }
 
+export interface CreateDemoRunInput {
+  requestedRunId?: string;
+  offlineOfferedQuantityLiters?: number;
+  actionIdempotencyKey: string;
+  maxDemoRuns?: number;
+}
+
 const systemActor: Actor = { id: "system", name: "FieldRelay", role: "SYSTEM" };
 
 function now(): string {
@@ -47,7 +63,12 @@ function now(): string {
 }
 
 function requireQuantity(value: unknown, field: string, allowZero = false): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || (allowZero ? value < 0 : value <= 0)) {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    value > 1_000_000_000 ||
+    (allowZero ? value < 0 : value <= 0)
+  ) {
     throw validationError(`${field} must be ${allowZero ? "a non-negative" : "a positive"} number`, { field });
   }
   return value;
@@ -64,7 +85,7 @@ function newExceptionId(shipmentId: string): string {
 }
 
 function newDeliveryId(shipmentId: string): string {
-  return shipmentId === "FR-2026-0842" ? "DL-019" : `DL-${randomUUID().slice(0, 8).toUpperCase()}`;
+  return demoDeliveryIdForShipment(shipmentId) ?? `DL-${randomUUID().slice(0, 8).toUpperCase()}`;
 }
 
 function newOutboxId(): string {
@@ -81,6 +102,98 @@ export class FieldRelayService {
 
   get realtime(): FieldRelayEventBus {
     return this.eventBus;
+  }
+
+  async createDemoRun(input: CreateDemoRunInput): Promise<ServiceResult> {
+    requireText(input.actionIdempotencyKey, "Idempotency-Key");
+    const requestedRunId = input.requestedRunId?.trim().toLowerCase();
+    if (requestedRunId && !/^[a-z0-9][a-z0-9-]{1,22}[a-z0-9]$/.test(requestedRunId)) {
+      throw validationError("runId must be 3-24 lowercase letters, numbers, or internal hyphens");
+    }
+    const offlineOfferedQuantityLiters =
+      input.offlineOfferedQuantityLiters === undefined
+        ? undefined
+        : requireQuantity(input.offlineOfferedQuantityLiters, "offlineOfferedQuantityLiters");
+    const requestHash = hashValue({
+      requestedRunId: requestedRunId ?? null,
+      offlineOfferedQuantityLiters: offlineOfferedQuantityLiters ?? null
+    });
+    const result = await this.store.transaction(async (tx) => {
+      const existing = await tx.getIdempotencyResult(input.actionIdempotencyKey);
+      if (existing) return this.replay(existing, requestHash);
+
+      if (input.maxDemoRuns !== undefined) {
+        await tx.acquireLock("demo-runs:capacity");
+        const currentRunCount = await tx.countDemoRuns();
+        if (currentRunCount >= input.maxDemoRuns) {
+          throw new DomainError(
+            "The public demo has reached its immutable run capacity",
+            503,
+            "DEMO_RUN_CAPACITY_REACHED",
+            { limit: input.maxDemoRuns }
+          );
+        }
+      }
+
+      const runId = requestedRunId ?? randomUUID().replaceAll("-", "").slice(0, 12);
+      const resources = demoResourceIds(runId);
+      await tx.acquireLock(`demo-run:${runId}`);
+      if (await tx.getShipment(resources.shipmentId)) {
+        throw new DomainError("This demo run already exists", 409, "DEMO_RUN_EXISTS", { runId });
+      }
+
+      const snapshot = createDemoRunSnapshot(runId);
+      await insertSnapshot(tx, snapshot);
+      const shipment = snapshot.shipments[0];
+      const exceptionRecord = snapshot.exceptions[0];
+      if (!shipment || !exceptionRecord) throw new Error("Demo run snapshot is incomplete");
+
+      const offlineOperation = demoOfflineRecoveryOperation(
+        runId,
+        offlineOfferedQuantityLiters ?? canonicalDemoScenario.quantitiesLiters.offered
+      );
+      const response = {
+        runId,
+        isolated: true,
+        replayed: false,
+        baseline: "DISCREPANCY_OPEN",
+        resources: {
+          shipmentId: resources.shipmentId,
+          exceptionId: resources.exceptionId,
+          deliveryId: resources.deliveryId
+        },
+        scenario: canonicalDemoScenario,
+        offlineRecovery: {
+          operation: offlineOperation,
+          syncPath: "/api/v1/sync/operations",
+          resultPath: `/api/v1/sync/results/${offlineOperation.idempotencyKey}`,
+          expectedServerMutations: 1,
+          instructions:
+            "Send this operation, discard the first response to simulate loss, then resend it unchanged or recover by resultPath."
+        },
+        shipment,
+        exception: exceptionRecord,
+        timeline: snapshot.auditEvents,
+        delivery: null,
+        deliveryAttempts: [],
+        conflicts: [],
+        resetStrategy:
+          "Create another isolated run with a new Idempotency-Key; existing evidence is never deleted or rewritten."
+      };
+      await this.saveIdempotency(tx, {
+        key: input.actionIdempotencyKey,
+        requestHash,
+        operationType: "CREATE_DEMO_RUN",
+        shipmentId: shipment.id,
+        statusCode: 201,
+        response,
+        createdAt: now()
+      });
+      return { statusCode: 201, body: response };
+    });
+
+    this.publishFromResult(result, String((result.body.shipment as Shipment | undefined)?.id ?? ""), "demo.run.created");
+    return result;
   }
 
   async getIdempotencyResult(key: string): Promise<ServiceResult> {
@@ -325,7 +438,18 @@ export class FieldRelayService {
         });
       }
 
-      const occurredAt = input.occurredAt ?? now();
+      // The synthetic scenario may be seeded slightly ahead of the wall clock
+      // on the day it is demonstrated. A server-timed resolution must never
+      // predate its immutable opening event.
+      const occurredAt = input.occurredAt
+        ? new Date(input.occurredAt).toISOString()
+        : new Date(Math.max(Date.now(), Date.parse(exceptionRecord.openedAt))).toISOString();
+      if (Date.parse(occurredAt) < Date.parse(exceptionRecord.openedAt)) {
+        throw validationError("occurredAt cannot be earlier than the discrepancy opening time", {
+          occurredAt,
+          openedAt: exceptionRecord.openedAt
+        });
+      }
       const acceptedFinalQuantityLiters = requireQuantity(
         input.acceptedFinalQuantityLiters,
         "acceptedFinalQuantityLiters",
@@ -395,7 +519,11 @@ export class FieldRelayService {
       return { statusCode: 200, body: response };
     });
 
-    this.publishFromResult(result, String((result.body.shipment as Shipment | undefined)?.id ?? ""));
+    this.publishFromResult(
+      result,
+      String((result.body.shipment as Shipment | undefined)?.id ?? ""),
+      "exception.changed"
+    );
     return result;
   }
 
@@ -474,7 +602,7 @@ export class FieldRelayService {
         updatedDelivery.status = "FAILED";
         updatedShipment.deliveryStatus = "FAILED";
         updatedOutbox.status = "FAILED";
-      } else if (attemptNumber >= delivery.maxAttempts && input.kind === "AUTOMATIC") {
+      } else if (input.kind === "MANUAL_REPLAY" || attemptNumber >= delivery.maxAttempts) {
         updatedDelivery.status = "DLQ";
         updatedShipment.deliveryStatus = "DLQ";
         updatedOutbox.status = "DLQ";
@@ -523,7 +651,11 @@ export class FieldRelayService {
       });
       return { statusCode: 200, body: response };
     });
-    this.publishFromResult(result, String((result.body.shipment as Shipment | undefined)?.id ?? ""));
+    this.publishFromResult(
+      result,
+      String((result.body.shipment as Shipment | undefined)?.id ?? ""),
+      "delivery.changed"
+    );
     return result;
   }
 
@@ -535,6 +667,7 @@ export class FieldRelayService {
     if (operation.baseVersion !== 0) {
       throw validationError("A new shipment must have baseVersion 0");
     }
+    await tx.acquireLock(`shipment:${operation.shipmentId}`);
     if (await tx.getShipment(operation.shipmentId)) {
       throw new DomainError("Shipment already exists", 409, "DUPLICATE_SHIPMENT", {
         shipmentId: operation.shipmentId
@@ -553,7 +686,7 @@ export class FieldRelayService {
       deliveryStatus: "NOT_STARTED",
       ...(offeredQuantityLiters === undefined ? {} : { offeredQuantityLiters }),
       version: 1,
-      createdAt: operation.deviceTimestamp,
+      createdAt: new Date(operation.deviceTimestamp).toISOString(),
       updatedAt: recordedAt
     };
     await tx.insertShipment(shipment);
@@ -751,12 +884,17 @@ export class FieldRelayService {
     await tx.insertIdempotencyResult(result);
   }
 
-  private publishFromResult(result: ServiceResult, shipmentId: string): void {
+  private publishFromResult(
+    result: ServiceResult,
+    shipmentId: string,
+    defaultType: RealtimeEvent["type"] = "shipment.changed"
+  ): void {
+    if (result.body.replayed === true) return;
     const status = String(result.body.status ?? "");
     const isConflict = status === "NEEDS_REVIEW";
     this.eventBus.publish({
       id: randomUUID(),
-      type: isConflict ? "sync.conflict" : "shipment.changed",
+      type: isConflict ? "sync.conflict" : defaultType,
       occurredAt: now(),
       data: { shipmentId, result: result.body }
     });
