@@ -110,7 +110,13 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=128m,mode=1777
-      - /srv/fieldrelay-web/.wrangler:size=128m,mode=1777
+      # Wrangler resolves its runtime scratch directory relative to the built
+      # worker config, while Miniflare and Wrangler also keep disposable local
+      # state in these two locations. Keep the image read-only and grant only
+      # the exact ephemeral paths exercised by the production command.
+      - /home/node/.config:size=32m,mode=1777
+      - /srv/fieldrelay-web/dist/server/.wrangler:size=64m,mode=1777
+      - /srv/fieldrelay-web/node_modules/.mf:size=64m,mode=1777
     security_opt:
       - no-new-privileges:true
     cpus: "0.50"
