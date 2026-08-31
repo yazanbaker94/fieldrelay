@@ -1,0 +1,146 @@
+name: ${COMPOSE_PROJECT_NAME:-fieldrelay}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fieldrelay}
+      POSTGRES_USER: ${POSTGRES_USER:-fieldrelay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in infra/.env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+  api:
+    image: ${FIELDRELAY_API_IMAGE:-fieldrelay-api:local}
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in infra/.env}
+      PORT: "4100"
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGIN: https://${FIELDRELAY_DOMAIN:-fieldrelay.swoop.video}
+      DELIVERY_DESTINATION_TYPE: ${DELIVERY_DESTINATION_TYPE:-GENERIC_WEBHOOK}
+      DELIVERY_DESTINATION_NAME: ${DELIVERY_DESTINATION_NAME:-ERP Demo / Generic Webhook}
+      DELIVERY_DESTINATION_URL: ${DELIVERY_DESTINATION_URL:-local://delivery-simulator}
+    expose:
+      - "4100"
+    networks:
+      - edge
+      - data
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4100/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    image: ${FIELDRELAY_WEB_IMAGE:-fieldrelay-web:local}
+    build:
+      context: ..
+      dockerfile: infra/docker/web.Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3000"
+    networks:
+      - edge
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+      - /srv/fieldrelay-web/.wrangler:size=128m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      FIELDRELAY_DOMAIN: ${FIELDRELAY_DOMAIN:-fieldrelay.swoop.video}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-q",
+          "-O",
+          "/dev/null",
+          "http://127.0.0.1:8080/healthz",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  edge:
+  data:
+    internal: true
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

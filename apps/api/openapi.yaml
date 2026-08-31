@@ -1,0 +1,184 @@
+openapi: 3.1.0
+info:
+  title: FieldRelay API
+  version: 0.1.0
+  description: >-
+    Offline-first chain-of-custody portfolio prototype using synthetic data.
+    Not affiliated with WiQ and not for production or regulatory use.
+servers:
+  - url: http://localhost:4100/api/v1
+paths:
+  /demo:
+    get:
+      summary: Get the complete FR-2026-0842 demo storyline
+      responses:
+        "200": { description: Demo shipment, timeline, exception, and delivery }
+  /shipments:
+    get:
+      summary: List shipments
+      parameters:
+        - { name: lifecycleStatus, in: query, schema: { $ref: "#/components/schemas/LifecycleStatus" } }
+        - { name: exceptionStatus, in: query, schema: { $ref: "#/components/schemas/ExceptionStatus" } }
+        - { name: deliveryStatus, in: query, schema: { $ref: "#/components/schemas/DeliveryStatus" } }
+      responses:
+        "200": { description: Shipment list }
+  /shipments/{id}:
+    get:
+      summary: Get a shipment and its operational records
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Shipment detail }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /shipments/{id}/audit/verify:
+    get:
+      summary: Verify the append-only SHA-256 audit chain
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Chain verification result }
+  /sync/operations:
+    post:
+      summary: Synchronize one durable offline operation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SyncOperation" }
+      responses:
+        "200": { description: Operation synchronized }
+        "201": { description: Shipment created }
+        "409": { description: Version conflict or idempotency-key mismatch }
+  /sync/results/{idempotencyKey}:
+    get:
+      summary: Recover the original result after a lost response
+      parameters:
+        - name: idempotencyKey
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Original result }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /exceptions:
+    get:
+      summary: List shipment exceptions
+      responses:
+        "200": { description: Exception list }
+  /exceptions/{id}:
+    get:
+      summary: Get an exception and immutable evidence
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Exception detail }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /exceptions/{id}/resolve:
+    post:
+      summary: Resolve a discrepancy and atomically create its outbox delivery
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Resolution" }
+      responses:
+        "200": { description: Resolved exception, completed shipment, and pending delivery }
+  /deliveries:
+    get:
+      summary: List integration deliveries
+      responses:
+        "200": { description: Delivery list }
+  /deliveries/{id}:
+    get:
+      summary: Get delivery attempts and outbox payload
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Delivery detail }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /deliveries/{id}/attempt:
+    post:
+      summary: Run one automatic delivery attempt
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200": { description: Attempt result }
+  /deliveries/{id}/replay:
+    post:
+      summary: Manually replay a failed or DLQ delivery
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200": { description: Replay result }
+  /events:
+    get:
+      summary: Subscribe to server-sent operational events
+      responses:
+        "200":
+          description: text/event-stream
+          content:
+            text/event-stream: {}
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+  responses:
+    NotFound:
+      description: Record not found
+  schemas:
+    LifecycleStatus:
+      type: string
+      enum: [DRAFT, OFFERED, ACCEPTED, PICKED_UP, IN_TRANSIT, RECEIVED, COMPLETED]
+    SyncStatus:
+      type: string
+      enum: [SAVED_ON_DEVICE, WAITING, SYNCING, SYNCED, NEEDS_REVIEW]
+    ExceptionStatus:
+      type: string
+      enum: [NONE, DISCREPANCY_OPEN, RESOLVED]
+    DeliveryStatus:
+      type: string
+      enum: [NOT_STARTED, PENDING, RETRYING, FAILED, DLQ, DELIVERED]
+    Actor:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        role: { type: string }
+    SyncOperation:
+      type: object
+      required: [operationId, idempotencyKey, type, shipmentId, baseVersion, deviceTimestamp, actor, payload]
+      properties:
+        operationId: { type: string }
+        idempotencyKey: { type: string }
+        type:
+          type: string
+          enum: [CREATE_SHIPMENT, OFFER_SHIPMENT, ACCEPT_HANDOFF, CONFIRM_PICKUP, RECORD_RECEIPT]
+        shipmentId: { type: string }
+        baseVersion: { type: integer, minimum: 0 }
+        deviceTimestamp: { type: string, format: date-time }
+        actor: { $ref: "#/components/schemas/Actor" }
+        payload: { type: object, additionalProperties: true }
+    Resolution:
+      type: object
+      required: [category, acceptedFinalQuantityLiters, reason, note, actor]
+      properties:
+        category: { type: string }
+        acceptedFinalQuantityLiters: { type: number, minimum: 0 }
+        reason: { type: string }
+        note: { type: string }
+        actor: { $ref: "#/components/schemas/Actor" }
+        occurredAt: { type: string, format: date-time }

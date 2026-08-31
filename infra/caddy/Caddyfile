@@ -1,0 +1,46 @@
+{
+	admin off
+}
+
+# Internal-only liveness endpoint for the container health check.
+:8080 {
+	respond /healthz 200
+}
+
+{$FIELDRELAY_DOMAIN:fieldrelay.swoop.video} {
+	encode zstd gzip
+
+	log {
+		output stdout
+		format json
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	@events path /api/v1/events
+	reverse_proxy @events api:4100 {
+		flush_interval -1
+	}
+
+	@api path /api/* /health
+	reverse_proxy @api api:4100 {
+		health_uri /health
+		health_interval 20s
+		health_timeout 5s
+	}
+
+	@hashedAssets path /_next/static/*
+	header @hashedAssets Cache-Control "public, max-age=31536000, immutable"
+
+	@editorialAssets path /assets/* /favicon.svg
+	header @editorialAssets Cache-Control "public, max-age=86400"
+
+	reverse_proxy web:3000
+}

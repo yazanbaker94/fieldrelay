@@ -1,0 +1,392 @@
+We have now finalized the visual direction for FieldRelay. Do not redesign it into a conventional SaaS dashboard.
+I am attaching reference designs. Treat them as the visual source of truth for art direction, composition, density, typography, hierarchy, and brand character. The existing FieldRelay product/engineering brief remains the source of truth for functionality, business logic, states, data, and flows.
+The design concept is:
+“Dispatch Ledger / Instrumented Chain of Custody.”
+FieldRelay should feel like a combination of:
+-  an industrial field instrument, 
+-  a shipping/dispatch manifest, 
+-  an operational reconciliation ledger, 
+-  and a developer-grade recovery console. 
+It must feel authored and unmistakably FieldRelay, not like a generic SaaS template.
+The recurring visual signature is a thin connected event/relay line with numbered nodes:
+01 → 02 → 03 → 04 → 05 → 06
+Reuse this language throughout:
+-  shipment lifecycle, 
+-  homepage story, 
+-  exception evidence, 
+-  delivery retry attempts, 
+-  guided-demo progression, 
+-  mobile workflow, 
+-  audit timeline, 
+-  architecture diagrams. 
+Also use FieldRelay record notation as a branding device:
+FR / 2026 / 0842
+EX / 0037
+DL / 019
+EV / 0347
+These IDs should sometimes appear oversized or in gutters, almost like engineering drawing / dispatch indexing.
+Do not drift into:
+-  generic SaaS hero layouts, 
+-  floating laptop + phone mockups, 
+-  glassmorphism, 
+-  gradients everywhere, 
+-  huge rounded cards, 
+-  pill badges everywhere, 
+-  four identical KPI cards as the main visual language, 
+-  decorative blobs, 
+-  fake testimonials, 
+-  fake customers, 
+-  fake enterprise logos, 
+-  giant empty whitespace, 
+-  “AI startup” typography, 
+-  stock dashboard templates, 
+-  generic truck/barrel/shield logos. 
+Do not make every section a card.
+Use rules, alignment, typography, spacing, event rails, document structure and actual operational data to create the composition.
+Use:
+IBM Plex Sans
+for normal interface text, long-form text, form labels and mobile usability.
+IBM Plex Mono
+for:
+-  headings where appropriate, 
+-  IDs, 
+-  event numbers, 
+-  timestamps, 
+-  HTTP statuses, 
+-  technical values, 
+-  code, 
+-  correlation IDs. 
+Do not make every paragraph monospaced.
+Use tabular numerals for quantities.
+Important quantities such as:
+8,200 L
+8,180 L
+7,940 L
+should have strong visual weight.
+Base direction:
+-  warm paper/background: around #F7F5F0 
+-  clean surface: #FFFFFF 
+-  dark ink: around #101417 
+-  dark navigation: around #07121B 
+-  FieldRelay blue: around #1557B7 
+-  warning / discrepancy orange: around #F26A18 
+-  critical red: around #D52B20 
+-  recovery/success green: around #16753A 
+-  demo simulation violet: around #7250D8 
+-  muted rule/border: warm/cool light gray 
+These values can be adjusted slightly for contrast, but keep the same character.
+Most of the product should remain neutral.
+Color must be earned:
+-  orange = actionable discrepancy/warning 
+-  red = real failure 
+-  green = confirmed recovery/success 
+-  blue = interaction/product identity 
+-  violet = simulated/demo controls only 
+Never depend on color alone.
+-  low radius: roughly 4–8 px web 
+-  8–12 px where Android controls need more softness 
+-  almost no shadows 
+-  thin borders/rules 
+-  flat surfaces 
+-  strong grid alignment 
+-  no cards inside cards unless structurally necessary 
+Do not make FieldRelay look like a company selling a SaaS product.
+This is an authored technical portfolio case study.
+Navigation should be closer to:
+FIELDRELAY
+PRODUCT
+HOW IT WORKS
+ARCHITECTURE
+TECHNICAL DECISIONS
+GITHUB
+RUN DEMO ↗
+Do not add Customers, Pricing, Resources, testimonials, etc.
+Preserve the attached design direction.
+Left gutter:
+FR
+/
+2026
+/
+0842
+Main headline:
+ONE SHIPMENT.
+ EVERY HANDOFF.
+ NOTHING DISAPPEARS.
+Use blue only for the final line or another similarly restrained emphasis.
+Supporting copy:
+Created offline. Passed across teams.
+Exceptions resolved. Integrations recovered.
+The full story is always here.
+Primary CTA:
+RUN THE 90-SECOND DEMO
+Secondary:
+WATCH WALKTHROUGH →
+On the right, show the actual shipment lifecycle as the hero visual:
+01 CREATED OFFLINE
+02 OFFERED — 8,200 L
+03 PICKED UP — 8,180 L
+04 RECEIVED — 7,940 L
+−240 L / −2.93%
+DISCREPANCY OPEN
+05 RESOLVED
+06 DELIVERED — Replay → 200 OK
+The product data itself is the hero graphic.
+The torn-paper industrial panorama in the reference is part of the visual character.
+Use it sparingly:
+-  homepage transition, 
+-  maybe one internal case-study divider, 
+-  possibly the overview header in an extremely subtle way. 
+Do not turn the whole project into a grunge or construction theme.
+It should feel like a technical dossier with one physical-world anchor.
+Below the hero, tell the story of the same shipment rather than creating conventional feature sections.
+Use:
+01 / FIELD
+02 / HANDOFF
+03 / EXCEPTION
+04 / RECOVERY
+Each section advances FR-2026-0842.
+Preserve the dark narrow utility rail + large light work surface shown in the reference.
+Sidebar:
+F/R
+01 OVERVIEW
+02 SHIPMENTS
+03 EXCEPTIONS
+04 DELIVERY
+05 AUDIT
+06 SYSTEMS
+Bottom:
+violet DEMO MODE
+persona information
+small FieldRelay relay trace
+Do not turn the sidebar into a giant navigation panel.
+Pages do not all need the same composition.
+A workbench should look like a workbench.
+A delivery detail should look like a delivery trace.
+An audit page should look like evidence/history.
+Follow the attached reference closely.
+Header:
+EXCEPTION WORKBENCH     EX / 0037
+FR-2026-0842
+DISCREPANCY OPEN
+Main split:
+approximately 2/3 evidence + 1/3 resolution.
+Display immutable reported events vertically:
+01 GENERATOR OFFER
+Maya Chen · 09:12
+8,200 L
+EV-0347
+↓
+02 DRIVER PICKUP
+Marcus Lee · 10:03
+8,180 L
+−20 L / −0.24%
+↓
+03 RECEIVER
+Priya Shah · 14:08
+7,940 L
+−240 L / −2.93%
+The receiver event gets restrained orange emphasis.
+Then:
+THRESHOLD EXCEEDED
+Difference exceeds both 100 L and 1%.
+Then event history underneath.
+The three reported quantities must not look editable.
+Fields:
+-  Resolution category 
+-  Accepted final quantity 
+-  Reason 
+-  Note 
+Primary action:
+RESOLVE DISCREPANCY
+Include the statement:
+Original reports are immutable.
+Resolution creates a new accepted quantity.
+This is one of the most important product-design ideas in the project.
+Follow the attached reference closely.
+Header:
+INTEGRATION DELIVERY     DL / 019
+Do not make this a generic “integration card.”
+It should feel like a forensic delivery record.
+Left region:
+DELIVERY FAILED
+Destination:
+ERP Demo / OData Adapter
+Last result:
+HTTP 503 Service Unavailable
+Correlation ID.
+Action:
+REPLAY DELIVERY
+Attempt rail:
+14:33:02   Attempt 1       503
+14:34:05   Attempt 2       503
+14:36:11   Attempt 3       503
+14:37:12   Moved to DLQ
+14:41:28   Manual replay
+14:41:29   Attempt 4       200 OK
+Use the relay-line motif for this timeline.
+Right region:
+tabs:
+REQUEST
+RESPONSE
+EVENT
+TECHNICAL DETAILS
+Show an authentic code/payload viewer.
+Bottom can show compact delivery context / target system / delivery status information.
+The attached Overview/Sync & Operations reference is acceptable, but keep it secondary to the workbench.
+It can use compact modules for:
+-  On device 
+-  Needs attention 
+-  Delivery failures 
+-  All shipments 
+But do not let metric cards become the product's design language.
+The important content is:
+-  recent activity, 
+-  actionable exceptions, 
+-  sync status, 
+-  delivery status, 
+-  links directly into work. 
+This is an Android product.
+Do not implement iPhone conventions even if any generated reference image happens to show an iOS-like device frame.
+Use Android system bars, navigation behavior and minimum 48dp touch targets.
+The Android app should share FieldRelay typography, data language and relay motif, but it must feel like a real field application rather than a compressed desktop dashboard.
+Strong heading:
+Offline
+Persistent calm offline panel:
+2 actions saved on this device
+Will sync automatically
+Strong action:
++ CREATE SHIPMENT
+Then today's shipments as dense rows, not giant cards.
+Each row shows:
+-  shipment ID 
+-  lifecycle stage 
+-  one highest-priority secondary condition 
+Bottom nav:
+Home
+Create
+Shipments
+Sync
+REVIEW BEFORE SAVE
+Step 4 of 4
+Present the shipment like a compact manifest:
+Generator
+ Site
+ Offer
+ Driver
+ Unit
+ transport/material summary
+Each group can have an EDIT action.
+Bottom sticky button:
+SAVE ON THIS DEVICE
+Do not use Submit when offline.
+This should be a full confirmation state:
+Saved on this device
+Shipment FR-2026-0842 is safe on this phone.
+FieldRelay will synchronize automatically when connectivity returns.
+Actions:
+VIEW SHIPMENT
+VIEW SYNC STATUS
+A device/check symbol is preferable to implying that the cloud already received it.
+Primary human language:
+2 actions pending
+Your data is safe. We'll sync everything when you're online.
+Group into:
+-  Needs attention 
+-  Waiting for connection 
+-  Synchronizing 
+-  Recently synced 
+For each operation show:
+-  shipment 
+-  what happened 
+-  when it was saved 
+-  current state 
+-  what happens next 
+UUIDs, attempt counters, diagnostic IDs etc. go under Technical details, not on the main surface.
+Do not offer Retry merely because a device is offline.
+Make the numerical discrepancy the dominant visual:
+−240 L / −2.93%
+Show:
+Offer       8,200 L
+Pickup      8,180 L
+Received    7,940 L
+Explain:
+Difference exceeds both 100 L and 1%.
+Receipt can be recorded, but the shipment will remain under Operations review.
+Receiver-reported data remains immutable after submission. Do not place Operations resolution controls on the receiver mobile screen.
+Do not create one enormous badge system.
+Treat these as four separate dimensions:
+Shipment lifecycle
+Draft → Offered → Accepted → Picked up → In transit → Received → Completed
+Device synchronization
+Saved on device → Waiting → Syncing → Synced → Needs review
+Business exception
+None → Discrepancy open → Resolved
+External delivery
+Not started → Pending → Retrying → Failed → DLQ → Delivered
+On list rows, show:
+1.  lifecycle stage 
+2.  only the most important secondary condition 
+On detail screens, all dimensions can be visible.
+Demo controls must have a completely separate violet visual identity.
+Examples:
+DEMO MODE
+SIMULATE OFFLINE
+FORCE NEXT DELIVERY FAILURE
+SWITCH PERSONA
+RESET SCENARIO
+Never confuse simulated demo state with actual:
+-  offline state, 
+-  API failure, 
+-  discrepancy, 
+-  delivery failure. 
+Use the supplied reference designs.
+Create/recreate the following reusable assets:
+1. FieldRelay relay mark 
+   -  3–4 connected nodes 
+   -  thin line 
+   -  no truck/barrel/shield imagery 
+2. Relay/event-line component 
+   -  horizontal and vertical variants 
+   -  active/warning/success nodes 
+3. Industrial panorama 
+   -  monochrome/near-monochrome 
+   -  trucks + industrial landscape 
+   -  rough/torn-paper boundary 
+   -  used sparingly 
+4. Record-notation treatment 
+   -  FR / EX / DL / EV identifiers 
+5. Small custom state icons 
+   -  offline/device 
+   -  handoff 
+   -  exception 
+   -  delivery/replay 
+   -  immutable record 
+If exact original image assets are unavailable, recreate the spirit rather than inserting random stock photography.
+Do not merely “take inspiration” and then rebuild this using your normal component-library aesthetic.
+Preserve the unusual things that make these designs FieldRelay:
+-  engineering-style numbering, 
+-  left/gutter record IDs, 
+-  shipment/event rails, 
+-  document-like ruled composition, 
+-  off-white paper surfaces, 
+-  dark narrow operations rail, 
+-  restrained semantic colors, 
+-  raw operational values as visual content, 
+-  asymmetric compositions, 
+-  low radius, 
+-  almost no shadow, 
+-  dense but calm presentation. 
+If a component looks like it could have come directly from a generic Tailwind/Shadcn SaaS starter, reconsider it.
+Build a reusable design system from this visual language rather than replacing the visual language with a pre-existing design system.
+Before building every screen, implement these accurately and show them for review:
+1.  Public landing hero 
+2.  Operations Overview 
+3.  Exception Workbench 
+4.  Integration Delivery 
+5.  Android Home — offline 
+6.  Android Review Before Save 
+7.  Android Saved on Device 
+8.  Android Sync Center 
+9.  Android Receiver Discrepancy 
+Do not proceed to derive all secondary screens until these establish the final system.
+The goal is that if the FieldRelay logo were hidden, someone could still recognize every screen as belonging to the same product.

@@ -1,0 +1,48 @@
+# Dependencies
+**/node_modules/
+
+# Web output and local hosting state
+apps/web/dist/
+apps/web/.next/
+apps/web/.vinext/
+apps/web/.wrangler/
+apps/web/outputs/
+
+# API output
+apps/api/dist/
+apps/api/coverage/
+
+# Android / Expo generated output
+apps/mobile/.expo/
+apps/mobile/.claude/
+apps/mobile/AGENTS.md
+apps/mobile/CLAUDE.md
+apps/mobile/android/.cxx/
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+apps/mobile/coverage/
+apps/mobile/.git-scaffold-backup/
+apps/mobile/artifacts/*.apk
+apps/mobile/artifacts/*.apk.sha256
+apps/web/public/downloads/*.apk
+apps/web/public/downloads/*.apk.sha256
+
+# Local scaffold cache (the real application is apps/web)
+web-scaffold/
+
+# Environment, keys, and signing material
+**/.env
+**/.env.local
+**/*.jks
+**/*.keystore
+!**/.env.example
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Database backups are operational artifacts, not source
+infra/backups/

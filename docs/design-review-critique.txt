@@ -1,0 +1,473 @@
+Verdict
+
+The document is strategically excellent but not yet a complete design brief.
+
+My rating:
+
+Area	Rating	Why
+Product thinking	9/10	Strong workflow, failure handling, auditability and demo narrative
+Fit for WiQ role	9/10	Directly demonstrates end-to-end ownership, React/React Native, Node, PostgreSQL and AWS
+Engineering scope	8/10	Credible architecture, but too large for a portfolio prototype
+UX specification	7/10	Covers screens and states well, but several workflow decisions remain unresolved
+Visual direction	5/10	“Industrial, modern, trustworthy” is not specific enough to prevent generic SaaS output
+Recruiter usability	7/10	Guided demo is smart, but the full experience still asks too much of a reviewer
+
+The central idea is very strong. WiQ explicitly wants somebody who can receive an ambiguous business problem, learn the rules, design the whole flow, account for edge cases, and own it through release. FieldRelay demonstrates exactly that. WiQ’s current role description strongly validates the project direction.
+
+The biggest risk is not that FieldRelay looks bad. It is that it becomes a massive, polished, generic enterprise dashboard and never communicates your actual product judgment.
+
+What the brief gets right
+Failure-first engineering is the strongest differentiator. Offline work, duplicate submissions, conflicting quantities, failed integrations and reconstruction through audit history all match the kinds of edge cases WiQ specifically says developers must discover themselves.
+The end-to-end shipment story is far stronger than a collection of disconnected portfolio screens.
+The guided demo is essential. A reviewer should understand the product without installing an APK.
+Synthetic data, independent branding and disclaimers are handled responsibly.
+The architecture is aligned with the position without pretending to reproduce WiQ.
+The Android app is treated as a real product rather than a responsive dashboard.
+The document correctly emphasizes templates, auto-filled fields and fast field entry. WiQ says its real field workflow works offline and that many manifests can be completed in under a minute. WiQ energy workflow
+What must be fixed before design starts
+1. The scope needs three priority levels
+
+The current brief asks for roughly 30 designed screens, four deployable applications, a real-time event system, SQS, DLQ, OData, signatures, QR handoffs, audit history, observability, documentation and two walkthrough videos.
+
+That is closer to a funded MVP than a portfolio demo.
+
+The design agent should prioritize:
+
+Hero experience
+
+Landing page
+Guided-demo layer
+Web shipment detail
+Exception workbench
+Integration-delivery detail
+Mobile home
+Mobile review/offline-save confirmation
+Sync status
+Receiver discrepancy
+
+Supporting experience
+
+Shipments and exceptions lists
+Mobile form steps
+Audit page
+Android download page
+Architecture page
+
+Derived screens
+
+System page
+Settings
+Empty states
+Secondary handoffs
+Less important lists
+
+The derived screens should reuse components rather than each receiving a bespoke visual treatment.
+
+2. The state model is visually and logically overloaded
+
+The 19 listed states should not be one giant status system. They belong to four parallel dimensions:
+
+Dimension	Examples
+Shipment lifecycle	Draft, offered, accepted, in transit, received, completed
+Device synchronization	Saved on device, queued, syncing, synced, needs review
+Business exception	None, discrepancy open, resolved
+External delivery	Not started, pending, retrying, failed, DLQ, delivered
+
+A shipment should be able to display:
+
+Received · Saved on device · Discrepancy open · Export not started
+
+Those are not interchangeable colored badges. On list screens, show the shipment stage plus only the highest-priority secondary condition. Show all dimensions on the detail screen.
+
+3. Several business rules remain undefined
+
+The agent needs answers to these before designing interactions:
+
+Does a discrepancy prevent Completed?
+Does “accepted final quantity” become a new derived value, or overwrite the receiver quantity? It should be a new value; reported values must remain immutable.
+What exact demo threshold triggers a discrepancy?
+Why is the offered-to-pickup difference of 20 L accepted while the pickup-to-receipt difference of 240 L is flagged?
+What event changes Picked up into In transit?
+Can a driver handoff opened from a web link work offline? Normally it cannot unless the token and shipment were preloaded.
+What happens when the server accepts an operation but the device loses connectivity before receiving the response?
+
+My recommended demo rule:
+
+Flag a discrepancy when the pickup-to-receipt difference exceeds both 1% and 100 L.
+
+For the sample shipment:
+
+Offered → pickup: −20 L / −0.24%
+Pickup → received: −240 L / −2.93%
+Result: discrepancy open
+Shipment remains Received until resolved
+Resolution records a separate Accepted final quantity
+Only then can it become Completed
+
+If the response disappears after the server processed a mobile operation, the UI should show Checking sync result, retry with the same idempotency key, and then recover the original result. It should not briefly tell the user the save failed.
+
+4. The mobile diagnostics are too technical
+
+A driver should not see UUIDs, operation IDs and attempt counts as primary information.
+
+The main sync row should say:
+
+Shipment FR-2026-0842
+Receipt saved on this device
+Waiting for connection
+
+Then an expandable Technical details area can contain:
+
+Local operation ID
+Attempt count
+Last error
+Diagnostic ID
+
+Fulcrum uses an unsynced-record count and automatic synchronization while keeping deeper sync mechanics secondary. ArcGIS similarly exposes troubleshooting logs when sync actually fails. Fulcrum mobile sync, ArcGIS Field Maps sync
+
+5. The demo layer must look separate from the product
+
+Use a violet Demo simulation identity for:
+
+Simulate offline
+Force integration failure
+Switch persona
+Reset scenario
+
+Real system state retains normal semantic colors:
+
+Device online
+Device offline
+API unavailable
+2 items awaiting sync
+
+Otherwise a reviewer may not know whether they are observing a real network failure or a staged demonstration.
+
+Recommended visual concept
+
+I would call the art direction:
+
+Instrumented chain of custody
+
+It should feel like a modern operations instrument: calm, precise and built around evidence. Not “construction-themed,” not futuristic, and not a compliance-software clone.
+
+Brand signature
+
+Create a small symbol made from:
+
+Three connected nodes
+A stepped route
+A final arrow or receiving node
+
+It represents:
+
+Field device
+Handoff
+Operations
+External destination
+Preserved event history
+
+Use that same stepped relay line sparingly across:
+
+The application icon
+Landing-page section transitions
+Timeline markers
+Guided-demo progress
+Architecture diagram
+
+Avoid barrels, recycling leaves, trucks, hazard diamonds and generic shield/checkmark logos.
+
+Proposed design foundation
+Token	Direction
+Primary	Signal blue #1F5FBF
+Primary dark	#17468C
+Ink	#17222D
+Muted text	#52606D
+Application canvas	#F4F6F8
+Marketing canvas	Warm manifest paper #F7F4EE
+Surface	#FFFFFF
+Border	#CBD5DF
+Success	#18705A
+Warning/offline	#8A5200
+Critical	#B42318
+Demo simulation	#6D4AFF
+Typography	IBM Plex Sans
+IDs/logs	IBM Plex Mono
+Radius	4, 6 and 10 px; pill only for compact tags
+Shadows	Nearly none; use borders and surface contrast
+Icons	Simple 1.75–2 px outlined icons
+
+White text on the proposed blue, green, amber, red and violet colors clears normal-text AA contrast. Statuses should still always include an icon and label. Carbon recommends combining shape, icon, meaningful color and descriptive text for important statuses, while WCAG requires sufficient text and non-text contrast. Carbon status pattern, WCAG 2.2
+
+These are the product families whose interaction patterns are worth studying—not visually cloning:
+
+4
+Public website direction
+
+The landing page should feel like a visual case study, not like FieldRelay is soliciting enterprise customers.
+
+Better hero structure
+
+Left:
+
+Independent portfolio prototype
+
+A shipment workflow that keeps its story—even when the network disappears.
+
+Create offline. Handoff across teams. Reconcile discrepancies. Recover failed delivery.
+
+Actions:
+
+Run the 90-second demo
+Watch the walkthrough
+Download Android APK
+
+Right:
+
+Real mobile review screen in front
+Exception workbench behind
+Small event rail: Saved on device → Synced once → Discrepancy opened → Export recovered
+
+Do not float multiple decorative cards around the screenshots.
+
+Recommended landing-page sequence
+Hero and immediate demo access
+Four compact proof points
+One-shipment story with a sticky screenshot that changes by stage
+Failure-and-recovery event sequence
+Mobile and web shown as one connected system
+Architecture
+Engineering decisions and rejected alternatives
+Why you built it and links
+Final CTA
+
+Merge the separate mobile, console and integration marketing sections into the shipment story. Otherwise the page will become extremely long and repetitive.
+
+Replace:
+
+One shipment. Four systems. No invisible failures.
+
+With:
+
+One shipment. Every handoff. No invisible failures.
+
+The current four stages describe workflow moments, not four systems.
+
+Make the site visibly authored
+
+Use real product details as the visual texture:
+
+FR-2026-0842
+EVT-07
+503 → 200
+240 L variance
+Timestamps
+Route nodes
+Correlation IDs
+
+That will feel more distinctive than decorative gradients, blobs or random industrial photography.
+
+Web operations-console direction
+
+Samsara’s operations guidance emphasizes a concise overview of the most actionable indicators, with filtering and direct paths into details—not a wall of ornamental KPIs. Samsara Operations Overview
+
+Shell
+232 px sidebar
+56 px top bar
+24–32 px page padding
+48 px default table rows
+Full-width working areas
+No cards nested inside cards
+Sticky table headers
+Collapse sidebar at 1024 px and hide lower-priority columns instead of squeezing everything
+Overview
+
+Top: a compact metric rail, not four giant cards.
+
+Main area:
+
+Left 8 columns: Needs attention
+Right 4 columns: live activity
+Bottom: shipment distribution and integration health
+Quiet system-health strip at the bottom
+
+Every exceptional row should include a recommended action.
+
+Exception workbench
+
+This should be the signature web screen.
+
+Use a 7/5 or 8/4 split:
+
+Main comparison
+
+Stage	Quantity	Change	Source
+Generator offered	8,200 L	—	Offline Android
+Driver pickup	8,180 L	−20 L	Handoff
+Receiver recorded	7,940 L	−240 L / −2.93%	Receiver Android
+
+Then show:
+
+Threshold exceeded: 240 L and 2.93%
+Original reports will remain preserved.
+
+Sticky resolution panel
+
+Resolution category
+Accepted final quantity
+Reason
+Note
+Resolve discrepancy
+
+Avoid presenting the three quantities as ordinary editable form fields.
+
+Integration-delivery detail
+
+Model the interaction after Stripe Workbench and GitHub webhook deliveries:
+
+Delivery status and destination
+Attempt history
+Last HTTP status
+Next retry
+Request/response tabs
+Idempotency and correlation IDs
+Replay action with explanation
+
+Stripe exposes delivered/pending/failed states, previous HTTP results and future retry timing. GitHub exposes request headers, payload, response and redelivery. Stripe event deliveries, GitHub webhook deliveries
+
+That pattern is substantially more credible than a generic queue dashboard.
+
+Android design direction
+
+Especially after the Rook experience—where the web felt strong but Android looked old—the mobile app needs its own native visual hierarchy. It should not be a narrow copy of the console.
+
+Mobile home
+
+Order the page by urgency:
+
+App bar: persona and demo label
+Persistent connection/sync strip
+Needs your action
+Large Create shipment action
+Today’s shipments
+Recently synchronized
+Bottom navigation
+
+Use four bottom destinations:
+
+Home
+Shipments
+Scan
+Sync, with pending count
+
+Android guidance recommends three to five primary destinations in the bottom navigation. Material also retains a minimum 48×48 dp accessible target, slightly stronger than the document’s current 44 px minimum. Android navigation guidance, Material spacing and targets
+
+Offline indication
+
+Offline must be persistent but calm:
+
+Offline · 2 actions saved on this device
+
+Use an amber outlined strip with a device icon. Do not use red unless work is actually at risk.
+
+Online with unsynced work:
+
+Online · Synchronizing 2 actions
+
+Normal synced state can collapse to a quiet cloud-check label.
+
+New-shipment flow
+
+Use four full-screen steps, with:
+
+Step 2 of 4
+Clear title
+One logical group at a time
+Preselected template values
+Large quantity field with unit suffix
+Sticky bottom Continue
+Back and save-draft support
+
+The review screen should use structured key/value rows with Edit actions. GOV.UK’s check-answer pattern supports a final review page before confirmation, and its error guidance preserves entered values rather than clearing the form. Check answers, Error messages
+
+Offline-save success
+
+Do not use a cloud checkmark.
+
+Use a device-check icon and:
+
+Saved on this device
+
+Shipment FR-2026-0842 is safe on this phone. FieldRelay will synchronize automatically when connectivity returns.
+
+Actions:
+
+View sync status
+Return home
+Sync status
+
+Group operations into:
+
+Needs attention
+Waiting for connection
+Synchronizing
+Synced recently
+
+Do not show Retry for something merely waiting for connectivity.
+
+Each row should communicate:
+
+What the user did
+Which shipment
+Whether the data is safe
+What will happen next
+
+Technical identifiers belong in an expandable diagnostic drawer.
+
+Conflict resolution
+
+On a phone, use stacked comparison blocks:
+
+Server version
+
+Shipment completed by Jordan at 14:21
+
+Saved on this device
+
+Receiver quantity 7,940 L, entered at 14:17
+
+Then offer:
+
+Send local entry for review
+Keep as separate draft
+Use server version
+
+Never offer a vague Refresh action that might imply silent data loss.
+
+Receiver discrepancy
+
+After the quantity is entered, show the exact comparison:
+
+Pickup quantity: 8,180 L
+Received quantity: 7,940 L
+Difference: −240 L / −2.93%
+
+Then:
+
+Receipt can be recorded, but the shipment will remain under Operations review.
+
+That is more useful than simply saying “a variance was detected.”
+
+What I would tell the other agent
+
+Do not let him begin with all 30 screens. Send this instruction:
+
+Keep the product and engineering brief as the source of truth, but establish a specific “instrumented chain of custody” design language before producing screens. Use IBM Plex Sans, signal blue rather than WiQ green, near-white operational surfaces, compact borders, restrained radii, and a connected-node relay motif.
+
+First design the landing hero, web exception workbench, integration-delivery detail, mobile home offline state, mobile review/offline-save success, sync status and receiver discrepancy. These screens must establish the complete system. Derive the remaining list, audit, settings and system screens from those components.
+
+Separate shipment stage, sync state, exception state and export state rather than treating all statuses as one badge system. Keep technical operation IDs behind expandable details on mobile.
+
+The public site must present a portfolio case study, not a fictional startup marketing page. The browser-based guided demo must show the entire value without requiring APK installation. Use real product data and event transitions as the visual signature; avoid gradients, oversized rounded cards, stock industrial photography and generic dashboard charts.
+
+So: keep the document, but revise the unresolved workflow rules, reduce the primary screen set, and give the agent this much stronger art direction before he starts.

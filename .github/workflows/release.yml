@@ -1,0 +1,67 @@
+name: Release images
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - api
+          - web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Normalize image name
+        id: image
+        shell: bash
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/fieldrelay-${{ matrix.component }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/metadata-action@v5
+        id: metadata
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=sha
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/${{ matrix.component }}.Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+          provenance: true
+          sbom: true
+
+  operations-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package relocatable deployment files
+        shell: bash
+        run: tar -czf fieldrelay-operations-${GITHUB_SHA}.tar.gz infra docs/deployment
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fieldrelay-operations-${{ github.sha }}
+          path: fieldrelay-operations-${{ github.sha }}.tar.gz
+          if-no-files-found: error
+          retention-days: 30

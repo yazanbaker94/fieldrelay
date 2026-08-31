@@ -1,0 +1,21 @@
+{
+  "name": "fieldrelay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline-first, auditable industrial shipment handoff and integration-recovery portfolio prototype.",
+  "scripts": {
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:api": "npm --prefix apps/api run dev",
+    "build": "npm run build:web && npm run build:api",
+    "build:web": "npm --prefix apps/web run build",
+    "build:api": "npm --prefix apps/api run build",
+    "test": "npm run test:api && npm run test:mobile",
+    "test:api": "npm --prefix apps/api test",
+    "test:mobile": "npm --prefix apps/mobile test",
+    "typecheck": "npm --prefix apps/api run typecheck && npm --prefix apps/mobile run typecheck",
+    "android:apk": "npm --prefix apps/mobile run android:apk"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

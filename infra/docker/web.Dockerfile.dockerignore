@@ -1,0 +1,10 @@
+**
+!apps/
+!apps/web/
+!apps/web/**
+apps/web/node_modules
+apps/web/dist
+apps/web/.next
+apps/web/.vinext
+apps/web/.wrangler
+apps/web/.env*
